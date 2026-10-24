@@ -1,7 +1,5 @@
 # Mr Rogers — Build Plan
 
-Last updated: 24 Oct 2026 · Owner: Rachel
-
 Live version (with comments): https://claude.ai/artifact/N6ZVFGSE9W8BSSdEmsnnq8
 Wireframes: https://claude.ai/artifact/25cHnCbxeDnWPRAzUySKyN
 
@@ -669,24 +667,24 @@ Answers needed before Phase 4. Everything else can wait.
 
 Handle these in v1. Each one is in the step where it comes up.
 
-| Edge case | What the API does | Step |
-| --- | --- | --- |
-| Bad input (missing type, empty description, 10,000 characters) | Returns 400 with a clear message | 2 |
-| Pin outside Australia or in the ocean | Rejects it | 2 |
-| Pin id that doesn't exist | Returns 404 | 5 |
-| Same email signs up twice | Supabase Auth rejects it | 7 |
-| Wrong password | Supabase Auth returns one general error | 7 |
-| Someone guesses passwords | Supabase Auth limits sign-in tries | 7 |
-| Display name looks like an address | Rejects it; moderators can reset it later | 9, 20 |
-| Address can't be found | Returns a clear error; the account isn't saved without one | 11 |
-| LocationIQ limit reached (daily cap or too many at once) | Returns a clear error so the web app can offer manual entry | 11 |
-| Address or real name leaks in a response | Only public profile fields leave the API; one test checks it | 11 |
-| Poster doesn't live nearby | Saves the pin as pending; labels it once approved | 12, 19 |
-| Voting twice | One vote per user per pin | 14 |
-| Deleting a pin that has replies and saves | Soft delete; saved copies come back marked "removed" | 17 |
-| Deleting someone else's pin | Returns 403 | 17 |
-| Member calls an admin endpoint | Returns 403 | 18 |
-| Supabase project pauses after a quiet week | Scheduled ping every 3 days | 23 |
+| Edge case                                                      | What the API does                                            | Step   |
+| -------------------------------------------------------------- | ------------------------------------------------------------ | ------ |
+| Bad input (missing type, empty description, 10,000 characters) | Returns 400 with a clear message                             | 2      |
+| Pin outside Australia or in the ocean                          | Rejects it                                                   | 2      |
+| Pin id that doesn't exist                                      | Returns 404                                                  | 5      |
+| Same email signs up twice                                      | Supabase Auth rejects it                                     | 7      |
+| Wrong password                                                 | Supabase Auth returns one general error                      | 7      |
+| Someone guesses passwords                                      | Supabase Auth limits sign-in tries                           | 7      |
+| Display name looks like an address                             | Rejects it; moderators can reset it later                    | 9, 20  |
+| Address can't be found                                         | Returns a clear error; the account isn't saved without one   | 11     |
+| LocationIQ limit reached (daily cap or too many at once)       | Returns a clear error so the web app can offer manual entry  | 11     |
+| Address or real name leaks in a response                       | Only public profile fields leave the API; one test checks it | 11     |
+| Poster doesn't live nearby                                     | Saves the pin as pending; labels it once approved            | 12, 19 |
+| Voting twice                                                   | One vote per user per pin                                    | 14     |
+| Deleting a pin that has replies and saves                      | Soft delete; saved copies come back marked "removed"         | 17     |
+| Deleting someone else's pin                                    | Returns 403                                                  | 17     |
+| Member calls an admin endpoint                                 | Returns 403                                                  | 18     |
+| Supabase project pauses after a quiet week                     | Scheduled ping every 3 days                                  | 23     |
 
 **Leave for later:** several pins at one spot (for now, many pins can share a spot, with one comment per person per pin per location), old pins that are no longer true, people moving house, emergencies (add a "Call 000" line on the About page for now).
 
@@ -696,18 +694,18 @@ Everything here is free for a hobby project.
 
 ### Backend tools
 
-| Job | Pick | Why this one |
-| --- | --- | --- |
-| API | Node + Express + TypeScript | Most tutorials and answers use it |
-| Database + sign-in | Supabase free plan (Supabase CLI locally) | Postgres plus ready-made sign-up, sign-in and password storage in one service |
-| Database code | Drizzle | Close to plain SQL, you already know it |
-| Validation | zod | Same schemas can be shared with the web app |
-| Address search | LocationIQ (free plan) | Autocomplete and lookup in one service. 5,000 requests a day, 2 a second. The web app must show a "Search by LocationIQ.com" link. Backup: Photon (free, no key) |
-| Testing | Vitest + Supertest | Fast tests that call your endpoints like a real client |
-| Trying endpoints | Bruno, Postman or Thunder Client | Free REST clients |
-| Security | helmet + express-rate-limit | Standard Express add-ons |
-| API hosting | Render (free plan) | Free with no card; redeploys from GitHub on merge. Sleeps after 15 minutes idle (about a minute to wake) |
-| Keep-alive | GitHub Actions scheduled workflow | Stops the Supabase project pausing (step 23) |
+| Job                | Pick                                      | Why this one                                                                                                                                                     |
+| ------------------ | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API                | Node + Express + TypeScript               | Most tutorials and answers use it                                                                                                                                |
+| Database + sign-in | Supabase free plan (Supabase CLI locally) | Postgres plus ready-made sign-up, sign-in and password storage in one service                                                                                    |
+| Database code      | Drizzle                                   | Close to plain SQL, you already know it                                                                                                                          |
+| Validation         | zod                                       | Same schemas can be shared with the web app                                                                                                                      |
+| Address search     | LocationIQ (free plan)                    | Autocomplete and lookup in one service. 5,000 requests a day, 2 a second. The web app must show a "Search by LocationIQ.com" link. Backup: Photon (free, no key) |
+| Testing            | Vitest + Supertest                        | Fast tests that call your endpoints like a real client                                                                                                           |
+| Trying endpoints   | Bruno, Postman or Thunder Client          | Free REST clients                                                                                                                                                |
+| Security           | helmet + express-rate-limit               | Standard Express add-ons                                                                                                                                         |
+| API hosting        | Render (free plan)                        | Free with no card; redeploys from GitHub on merge. Sleeps after 15 minutes idle (about a minute to wake)                                                         |
+| Keep-alive         | GitHub Actions scheduled workflow         | Stops the Supabase project pausing (step 23)                                                                                                                     |
 
 ### Frontend tools (list only)
 
