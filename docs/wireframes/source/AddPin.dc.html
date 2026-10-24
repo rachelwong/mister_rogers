@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Add a note</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&amp;family=IBM+Plex+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2457B8}a:hover{color:#163A80}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F4F4F2; font-family: 'IBM Plex Sans', sans-serif; color: #1F1F1D; display: flex; flex-direction: column">
+<header style="display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid #C9C9C4; background: #FFFFFF">
+<a href="Map.dc.html" style="font-size: 14px">Cancel</a>
+<div style="font-weight: 600; font-size: 16px">Add a note</div>
+<div style="width: 44px"></div>
+</header>
+<main style="flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 16px 20px; overflow: hidden">
+<div style="position: relative; height: 150px; border-radius: 8px; overflow: hidden; background: #E6E6E2; border: 1px solid #C9C9C4">
+<svg width="350" height="150" viewBox="0 0 350 150" aria-hidden="true" style="position: absolute; left: 0; top: 0"><path d="M0 80 C120 70 240 100 350 90" stroke="#FFFFFF" stroke-width="12" fill="none"></path><path d="M110 0 L125 150" stroke="#FFFFFF" stroke-width="8" fill="none"></path></svg>
+<div style="position: absolute; left: 158px; top: 46px; width: 30px; height: 30px; border-radius: 15px 15px 15px 0; transform: rotate(-45deg); background: #2457B8; border: 2px solid #FFFFFF"></div>
+<div style="position: absolute; left: 8px; bottom: 8px; padding: 4px 8px; border-radius: 4px; background: #FFFFFF; font-size: 12px">Drag the map to place the pin</div>
+<button type="button" style="position: absolute; right: 8px; bottom: 8px; padding: 6px 10px; border: 1px solid #9A9A96; border-radius: 6px; background: #FFFFFF; font-size: 12px; font-family: inherit">Use my location</button>
+</div>
+<div style="display: flex; gap: 10px; padding: 10px 12px; border-radius: 8px; background: #FDF3E7; border: 1px solid #E9B98A; font-size: 13px; line-height: 1.4; color: #5C2A04">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A3E05" stroke-width="2" aria-hidden="true" style="flex: none"><path d="M12 3l10 18H2z"></path><path d="M12 10v5M12 18v.5"></path></svg>
+<div>You don't live near this spot. A moderator will review it, and it will be labelled "contributed by someone who doesn't live nearby".</div>
+</div>
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+<legend style="font-size: 14px; font-weight: 600; padding: 0; margin-bottom: 8px">Type</legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{types}}" as="t" hint-placeholder-count="5">
+<button type="button" onClick="{{t.pick}}" style="padding: 8px 12px; border-radius: 18px; border: 1px solid {{t.border}}; background: {{t.bg}}; color: {{t.fg}}; font-size: 13px; font-family: inherit">{{t.label}}</button>
+</sc-for>
+</div>
+</fieldset>
+<sc-if value="{{emergency}}" hint-placeholder-val="{{ false }}">
+<div style="padding: 10px 12px; border-radius: 8px; background: #FBE9E7; color: #7A1F14; font-size: 13px">Is anyone in danger? Call 000 first. Sewage overflows can also be reported to Urban Utilities.</div>
+</sc-if>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="desc" style="font-size: 14px; font-weight: 600">What should people know?</label>
+<textarea id="desc" rows="3" placeholder="e.g. Water crosses the footpath here after 20 minutes of heavy rain" style="padding: 12px; font-size: 14px; border: 1px solid #9A9A96; border-radius: 8px; resize: none; font-family: inherit"></textarea>
+<div style="font-size: 12px; color: #6B6B66; text-align: right">0 / 500</div>
+</div>
+<button type="button" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 1px dashed #9A9A96; border-radius: 8px; background: #FFFFFF; font-size: 14px; font-family: inherit">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F1F1D" stroke-width="2" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="2"></rect><circle cx="12" cy="13" r="3.5"></circle><path d="M9 6l1.5-2h3L15 6"></path></svg>Add a photo (after v1)</button>
+<div style="flex: 1"></div>
+<a href="PinDetail.dc.html" style="display: block; text-align: center; padding: 14px; border-radius: 8px; background: #2457B8; color: #FFFFFF; text-decoration: none; font-weight: 600">Post note</a>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { type: 'Drainage' }; }
+renderVals() {
+const names = ['Drainage', 'Flooding', 'Accident', 'Sewage', 'Blocked path'];
+const cur = this.state.type;
+return {
+types: names.map((n) => ({
+label: n,
+border: n === cur ? '#2457B8' : '#9A9A96',
+bg: n === cur ? '#2457B8' : '#FFFFFF',
+fg: n === cur ? '#FFFFFF' : '#1F1F1D',
+pick: () => this.setState({ type: n })
+})),
+emergency: cur === 'Accident' || cur === 'Sewage'
+};
+}
+}
+</script>
+</body>
+</html>

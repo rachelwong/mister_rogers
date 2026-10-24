@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mr Rogers home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&amp;family=IBM+Plex+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2457B8}a:hover{color:#163A80}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F4F4F2; font-family: 'IBM Plex Sans', sans-serif; color: #1F1F1D; display: flex; flex-direction: column">
+<header style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #C9C9C4; background: #FFFFFF">
+<div style="font-weight: 600; font-size: 18px">Mr Rogers</div>
+<nav style="display: flex; gap: 16px; font-size: 14px"><a href="About.dc.html">About</a><a href="SignIn.dc.html">Sign in</a></nav>
+</header>
+<main style="flex: 1; display: flex; flex-direction: column; gap: 20px; padding: 28px 20px">
+<h1 style="margin: 0; font-size: 30px; line-height: 1.15">What your neighbours know about your street</h1>
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: #4A4A46">Drains that back up, paths that flood, branches that drop. Notes from people who actually live nearby.</p>
+<div style="height: 200px; border: 1px dashed #9A9A96; border-radius: 8px; background: #E6E6E2; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B6B66">[ map preview of Brisbane with sample pins ]</div>
+<a href="Map.dc.html" style="display: block; text-align: center; padding: 14px; border-radius: 8px; background: #2457B8; color: #FFFFFF; text-decoration: none; font-weight: 600">Explore the map</a>
+<a href="SignUp1.dc.html" style="display: block; text-align: center; padding: 14px; border-radius: 8px; border: 1px solid #2457B8; text-decoration: none; font-weight: 600">Join as a local</a>
+<section style="display: flex; flex-direction: column; gap: 10px; padding-top: 8px">
+<div style="font-weight: 600; font-size: 15px">How it works</div>
+<div style="font-size: 14px; color: #4A4A46">1. Sign up with your home address (never shown)</div>
+<div style="font-size: 14px; color: #4A4A46">2. Drop a note on the map: drainage, flooding, blocked path</div>
+<div style="font-size: 14px; color: #4A4A46">3. Locals vote; notes from nearby rank higher</div>
+</section>
+</main>
+<footer style="padding: 14px 20px; font-size: 12px; color: #6B6B66; border-top: 1px solid #C9C9C4">Not official flood advice. Emergency? Call 000.</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Profile</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&amp;family=IBM+Plex+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2457B8}a:hover{color:#163A80}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F4F4F2; font-family: 'IBM Plex Sans', sans-serif; color: #1F1F1D; display: flex; flex-direction: column">
+<header style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #C9C9C4; background: #FFFFFF">
+<div style="font-weight: 600; font-size: 18px">Profile</div>
+<a href="EditProfile.dc.html" style="font-size: 14px">Edit</a>
+</header>
+<section style="display: flex; gap: 14px; align-items: center; padding: 20px">
+<div style="width: 56px; height: 56px; border-radius: 28px; background: #C9C9C4; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 20px">S</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="font-weight: 600; font-size: 18px">StormWatcher</div>
+<div style="font-size: 13px; color: #4A4A46">Annerley · member since Oct 2026</div>
+<span style="align-self: flex-start; padding: 2px 8px; border-radius: 10px; background: #E7F3EA; color: #1E6B3A; font-size: 12px; font-weight: 600">Verified local</span>
+</div>
+</section>
+<div role="tablist" style="display: flex; border-bottom: 1px solid #C9C9C4; padding: 0 20px">
+<button type="button" role="tab" onClick="{{showMine}}" style="flex: 1; padding: 12px 0; border: 0; border-bottom: 3px solid {{mineLine}}; background: none; font-size: 14px; font-weight: 600; color: {{mineInk}}; font-family: inherit">My notes (3)</button>
+<button type="button" role="tab" onClick="{{showSaved}}" style="flex: 1; padding: 12px 0; border: 0; border-bottom: 3px solid {{savedLine}}; background: none; font-size: 14px; font-weight: 600; color: {{savedInk}}; font-family: inherit">Saved (2)</button>
+</div>
+<main style="flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 16px 20px; overflow: hidden">
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="3">
+<a href="PinDetail.dc.html" style="display: flex; flex-direction: column; gap: 6px; padding: 14px; border: 1px solid #C9C9C4; border-radius: 8px; background: #FFFFFF; text-decoration: none; color: #1F1F1D">
+<div style="display: flex; justify-content: space-between; align-items: center">
+<span style="font-size: 12px; font-weight: 600; color: #163A80">{{r.type}}</span>
+<span style="padding: 2px 8px; border-radius: 10px; background: {{r.badgeBg}}; color: {{r.badgeInk}}; font-size: 11px; font-weight: 600">{{r.badge}}</span>
+</div>
+<div style="font-size: 15px; font-weight: 600">{{r.title}}</div>
+<div style="font-size: 12px; color: #6B6B66">{{r.meta}}</div>
+</a>
+</sc-for>
+</main>
+<nav style="display: flex; border-top: 1px solid #C9C9C4; background: #FFFFFF">
+<a href="Map.dc.html" style="flex: 1; padding: 12px 0 18px; text-align: center; font-size: 12px; text-decoration: none; color: #4A4A46">Map</a>
+<a href="Profile.dc.html" style="flex: 1; padding: 12px 0 18px; text-align: center; font-size: 12px; text-decoration: none; color: #4A4A46">Saved</a>
+<a href="Profile.dc.html" style="flex: 1; padding: 12px 0 18px; text-align: center; font-size: 12px; font-weight: 600; text-decoration: none; color: #2457B8">Profile</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { tab: 'mine' }; }
+renderVals() {
+const mine = this.state.tab === 'mine';
+const green = { badgeBg: '#E7F3EA', badgeInk: '#1E6B3A' };
+const amber = { badgeBg: '#FDF3E7', badgeInk: '#8A3E05' };
+const grey = { badgeBg: '#EDEDEA', badgeInk: '#4A4A46' };
+const myRows = [
+{ type: 'Drainage', title: 'Kerb near the drain fills fast', meta: '14 votes · 2 replies · 3 days ago', badge: 'Live', ...green },
+{ type: 'Blocked path', title: 'Shortcut to the park floods', meta: 'Posted today', badge: 'Waiting for review', ...amber },
+{ type: 'Flooding', title: 'Creek crossing goes under first', meta: '31 votes · 6 replies · 2 months ago', badge: 'Live', ...green }
+];
+const savedRows = [
+{ type: 'Flooding', title: 'Underpass on the main road', meta: '58 votes · 1 week ago', badge: 'Saved', ...grey },
+{ type: 'Drainage', title: 'This note was removed', meta: 'Removed by its author', badge: 'Removed', ...grey }
+];
+return {
+rows: mine ? myRows : savedRows,
+mineLine: mine ? '#2457B8' : 'transparent', mineInk: mine ? '#1F1F1D' : '#6B6B66',
+savedLine: mine ? 'transparent' : '#2457B8', savedInk: mine ? '#6B6B66' : '#1F1F1D',
+showMine: () => this.setState({ tab: 'mine' }),
+showSaved: () => this.setState({ tab: 'saved' })
+};
+}
+}
+</script>
+</body>
+</html>

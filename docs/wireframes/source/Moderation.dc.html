@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Moderation queue</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&amp;family=IBM+Plex+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2457B8}a:hover{color:#163A80}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F4F4F2; font-family: 'IBM Plex Sans', sans-serif; color: #1F1F1D; display: flex; flex-direction: column">
+<header style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #C9C9C4; background: #FFFFFF">
+<div style="font-weight: 600; font-size: 18px">Moderation</div>
+<span style="padding: 2px 8px; border-radius: 10px; background: #1F1F1D; color: #FFFFFF; font-size: 11px; font-weight: 600">ADMIN</span>
+</header>
+<div role="tablist" style="display: flex; border-bottom: 1px solid #C9C9C4; padding: 0 12px; background: #FFFFFF">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+<button type="button" role="tab" onClick="{{t.pick}}" style="flex: 1; padding: 12px 0; border: 0; border-bottom: 3px solid {{t.line}}; background: none; font-size: 13px; font-weight: 600; color: {{t.ink}}; font-family: inherit">{{t.label}}</button>
+</sc-for>
+</div>
+<main style="flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 16px 20px; overflow: hidden">
+<sc-for list="{{items}}" as="i" hint-placeholder-count="3">
+<article style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid #C9C9C4; border-radius: 8px; background: #FFFFFF">
+<div style="display: flex; justify-content: space-between; font-size: 12px; color: #6B6B66"><span>{{i.kind}}</span><span>{{i.when}}</span></div>
+<div style="font-size: 15px; font-weight: 600">{{i.title}}</div>
+<div style="font-size: 13px; color: #4A4A46">{{i.detail}}</div>
+<div style="display: flex; gap: 8px; padding-top: 4px">
+<button type="button" style="flex: 1; padding: 10px; border: 0; border-radius: 8px; background: #1E6B3A; color: #FFFFFF; font-size: 14px; font-weight: 600; font-family: inherit">{{i.yes}}</button>
+<button type="button" style="flex: 1; padding: 10px; border: 1px solid #9B2C1F; border-radius: 8px; background: #FFFFFF; color: #9B2C1F; font-size: 14px; font-weight: 600; font-family: inherit">{{i.no}}</button>
+</div>
+</article>
+</sc-for>
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B6B66">[ every action is written to the moderation log ]</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { tab: 'accounts' }; }
+renderVals() {
+const cur = this.state.tab;
+const defs = [['accounts', 'Accounts (4)'], ['area', 'Out of area (2)'], ['flags', 'Flagged (1)']];
+const data = {
+accounts: [
+{ kind: 'New account', when: '2 h ago', title: 'Gutterguy', detail: 'Annerley · lived there 3–10 years', yes: 'Approve', no: 'Flag' },
+{ kind: 'New account', when: '5 h ago', title: 'Visitor42', detail: 'Moorooka · lived there less than 1 year', yes: 'Approve', no: 'Flag' }
+],
+area: [
+{ kind: 'Out-of-area note · Flooding', when: '1 h ago', title: 'Underpass ankle deep on Sunday', detail: 'Poster doesn\'t live nearby', yes: 'Approve', no: 'Reject' },
+{ kind: 'Out-of-area note · Drainage', when: '1 day ago', title: 'Drain blocked outside the shops', detail: 'Poster doesn\'t live nearby', yes: 'Approve', no: 'Reject' }
+],
+flags: [
+{ kind: 'Flagged reply', when: '20 min ago', title: '"The owner at number 14 never clears it"', detail: 'Flagged by a moderator: names a property', yes: 'Keep', no: 'Delete' }
+]
+};
+return {
+tabs: defs.map(([id, label]) => ({ label, line: id === cur ? '#2457B8' : 'transparent', ink: id === cur ? '#1F1F1D' : '#6B6B66', pick: () => this.setState({ tab: id }) })),
+items: data[cur]
+};
+}
+}
+</script>
+</body>
+</html>

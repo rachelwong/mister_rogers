@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Map</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&amp;family=IBM+Plex+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2457B8}a:hover{color:#163A80}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F4F4F2; font-family: 'IBM Plex Sans', sans-serif; color: #1F1F1D; display: flex; flex-direction: column">
+<div style="position: relative; flex: 1; overflow: hidden; background: #E6E6E2">
+<svg width="390" height="780" viewBox="0 0 390 780" aria-hidden="true" style="position: absolute; left: 0; top: 0">
+<path d="M0 300 C120 290 260 330 390 310" stroke="#FFFFFF" stroke-width="14" fill="none"></path>
+<path d="M140 0 L170 780" stroke="#FFFFFF" stroke-width="10" fill="none"></path>
+<path d="M0 520 L390 470" stroke="#FFFFFF" stroke-width="8" fill="none"></path>
+<path d="M300 0 L280 780" stroke="#FFFFFF" stroke-width="6" fill="none"></path>
+<path d="M30 640 C90 600 160 620 230 700 C260 735 300 760 390 750 L390 780 L0 780 Z" fill="{{floodFill}}" opacity="{{floodOpacity}}"></path>
+<path d="M0 660 C70 620 150 650 210 720 C240 750 290 770 390 765" stroke="#9EC3E6" stroke-width="10" fill="none"></path>
+</svg>
+<div style="position: absolute; left: 16px; right: 16px; top: 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 8px">
+<label for="q" style="position: absolute; width: 1px; height: 1px; overflow: hidden">Search suburb or address</label>
+<input id="q" placeholder="Search suburb or address" style="flex: 1; min-width: 0; padding: 12px 14px; font-size: 15px; border: 1px solid #9A9A96; border-radius: 8px; background: #FFFFFF; font-family: inherit">
+<button type="button" aria-label="Layers" style="width: 46px; height: 46px; border: 1px solid #9A9A96; border-radius: 8px; background: #FFFFFF; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1F1F1D" stroke-width="2" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"></path><path d="M3 13l9 5 9-5"></path></svg>
+</button>
+</div>
+<div style="display: flex; gap: 8px; overflow: hidden">
+<button type="button" style="flex: none; padding: 8px 12px; border: 0; border-radius: 18px; background: #1F1F1D; color: #FFFFFF; font-size: 13px; font-family: inherit">All</button>
+<button type="button" style="flex: none; padding: 8px 12px; border: 1px solid #9A9A96; border-radius: 18px; background: #FFFFFF; font-size: 13px; font-family: inherit">Drainage</button>
+<button type="button" style="flex: none; padding: 8px 12px; border: 1px solid #9A9A96; border-radius: 18px; background: #FFFFFF; font-size: 13px; font-family: inherit">Flooding</button>
+<button type="button" style="flex: none; padding: 8px 12px; border: 1px solid #9A9A96; border-radius: 18px; background: #FFFFFF; font-size: 13px; font-family: inherit">Blocked path</button>
+<button type="button" style="flex: none; padding: 8px 12px; border: 1px solid #9A9A96; border-radius: 18px; background: #FFFFFF; font-size: 13px; font-family: inherit">Sewage</button>
+</div>
+<button type="button" onClick="{{toggleFlood}}" style="align-self: flex-start; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid #9A9A96; border-radius: 8px; background: #FFFFFF; font-size: 13px; font-family: inherit">
+<span style="width: 14px; height: 14px; border-radius: 3px; background: {{floodSwatch}}; border: 1px solid #2457B8"></span>Flood overlay (after v1): {{floodLabel}}
+</button>
+</div>
+<a href="PinDetail.dc.html" aria-label="Drainage note" style="position: absolute; left: 196px; top: 286px; width: 34px; height: 34px; border-radius: 17px 17px 17px 0; transform: rotate(-45deg); background: #2457B8; border: 2px solid #FFFFFF"></a>
+<div aria-label="Flooding note" role="img" style="position: absolute; left: 82px; top: 404px; width: 30px; height: 30px; border-radius: 15px 15px 15px 0; transform: rotate(-45deg); background: #B4530A; border: 2px solid #FFFFFF"></div>
+<div aria-label="Blocked path note" role="img" style="position: absolute; left: 300px; top: 420px; width: 30px; height: 30px; border-radius: 15px 15px 15px 0; transform: rotate(-45deg); background: #5B4BA8; border: 2px solid #FFFFFF"></div>
+<button type="button" aria-label="12 notes here, zoom in" style="position: absolute; left: 220px; top: 560px; width: 48px; height: 48px; border-radius: 24px; border: 3px solid #FFFFFF; background: #1F1F1D; color: #FFFFFF; font-weight: 600; font-size: 15px; font-family: inherit">12</button>
+<div style="position: absolute; right: 16px; top: 250px; display: flex; flex-direction: column; border: 1px solid #9A9A96; border-radius: 8px; background: #FFFFFF; overflow: hidden">
+<button type="button" aria-label="Zoom in" style="width: 44px; height: 44px; border: 0; border-bottom: 1px solid #C9C9C4; background: #FFFFFF; font-size: 20px">+</button>
+<button type="button" aria-label="Zoom out" style="width: 44px; height: 44px; border: 0; border-bottom: 1px solid #C9C9C4; background: #FFFFFF; font-size: 20px">−</button>
+<button type="button" aria-label="Go to my location" style="width: 44px; height: 44px; border: 0; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F1F1D" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path></svg></button>
+</div>
+<sc-if value="{{signedIn}}" hint-placeholder-val="{{ false }}">
+<a href="AddPin.dc.html" style="position: absolute; right: 16px; bottom: 40px; display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-radius: 28px; background: #2457B8; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 15px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add note</a>
+</sc-if>
+<sc-if value="{{signedOut}}" hint-placeholder-val="{{ true }}">
+<a href="SignIn.dc.html" style="position: absolute; right: 16px; bottom: 40px; display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-radius: 28px; background: #2457B8; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 15px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Sign in to add a note</a>
+</sc-if>
+<div style="position: absolute; left: 8px; bottom: 8px; font-size: 10px; color: #4A4A46; background: #FFFFFFCC; padding: 2px 6px; border-radius: 4px">© OpenStreetMap · BCC open data</div>
+</div>
+<nav style="display: flex; border-top: 1px solid #C9C9C4; background: #FFFFFF">
+<a href="Map.dc.html" style="flex: 1; padding: 12px 0 18px; text-align: center; font-size: 12px; font-weight: 600; text-decoration: none; color: #2457B8">Map</a>
+<sc-if value="{{signedIn}}" hint-placeholder-val="{{ false }}">
+<a href="Profile.dc.html" style="flex: 1; padding: 12px 0 18px; text-align: center; font-size: 12px; text-decoration: none; color: #4A4A46">Saved</a>
+<a href="Profile.dc.html" style="flex: 1; padding: 12px 0 18px; text-align: center; font-size: 12px; text-decoration: none; color: #4A4A46">Profile</a>
+</sc-if>
+<sc-if value="{{signedOut}}" hint-placeholder-val="{{ true }}">
+<a href="SignIn.dc.html" style="flex: 1; padding: 12px 0 18px; text-align: center; font-size: 12px; text-decoration: none; color: #4A4A46">Sign in</a>
+<a href="SignUp1.dc.html" style="flex: 1; padding: 12px 0 18px; text-align: center; font-size: 12px; text-decoration: none; color: #4A4A46">Join</a>
+</sc-if>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"signedIn":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { flood: true }; }
+renderVals() {
+const on = this.state.flood;
+const signedIn = this.props.signedIn ?? false;
+return {
+signedIn: signedIn,
+signedOut: !signedIn,
+floodFill: '#5B8FD8',
+floodOpacity: on ? 0.35 : 0,
+floodSwatch: on ? '#5B8FD8' : '#FFFFFF',
+floodLabel: on ? 'on' : 'off',
+toggleFlood: () => this.setState({ flood: !on })
+};
+}
+}
+</script>
+</body>
+</html>
