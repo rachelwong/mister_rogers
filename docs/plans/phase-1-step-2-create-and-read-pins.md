@@ -1,6 +1,10 @@
 # Phase 1, Step 2 — Create and read pins (no database yet)
 
-Part of the [build plan](../build-plan.md#phase-1--the-api-can-save-and-return-pins). Pins are kept in an in-memory list; step 3 moves them to the database.
+Part of the [build plan](../build-plan.md#phase-1--the-api-can-save-and-return-pins).
+
+- Pins live in an in-memory list
+- The list empties every time the API restarts
+- Step 3 moves pins into the database
 
 ## What to build
 
@@ -15,66 +19,40 @@ Endpoints
 
 Error codes
 
-- `400` "Invalid pin" + `details`: a field breaks a rule below (`POST /pins`)
-- `400` "Request body isn't valid JSON": broken JSON (`POST /pins`)
-- `400` "Send the pin as JSON …": `Content-Type` isn't `application/json` (`POST /pins`)
-- `404` "Pin not found": no pin has that id (`GET /pins/:id`)
-- `404` "Not found": no route matches the method and path
-- `500` "Something went wrong": anything thrown that isn't handled; no stack trace
+| Code  | `error` message                                         | When                                             | Endpoint        |
+| ----- | ------------------------------------------------------- | ------------------------------------------------ | --------------- |
+| `400` | "Invalid pin" + `details`                               | A field breaks a rule below                      | `POST /pins`    |
+| `400` | "Request body isn't valid JSON"                         | The JSON is broken                               | `POST /pins`    |
+| `400` | "Send the pin as JSON (Content-Type: application/json)" | `Content-Type` isn't `application/json`          | `POST /pins`    |
+| `404` | "Pin not found"                                         | No pin has that id                               | `GET /pins/:id` |
+| `404` | "Not found"                                             | No route matches the method and path             | any             |
+| `500` | "Something went wrong"                                  | Anything thrown that isn't handled; no stack trace | any           |
 
 Field rules for `POST /pins`
 
-- `type`: required; one of `PIN_TYPES`
-- `description`: required; 1–500 characters after trimming spaces
-- `coords`: required; an object, not `null`
-- `coords.lat`: required number, -90 to 90
-- `coords.lng`: required number, -180 to 180
-- any other field: dropped; the API sets `id` and `createdAt` itself
+| Field         | Rule                                         | Message when it breaks                                        |
+| ------------- | -------------------------------------------- | ------------------------------------------------------------- |
+| `type`        | Required                                     | "Type is required"                                            |
+| `type`        | One of `PIN_TYPES`                           | "Type must be one of: drainage, flooding, wildlife, amenity, children, parking, traffic, recreation, disability, signage, none" |
+| `description` | Required text                                | "Description is required"                                     |
+| `description` | At least 1 character after trimming spaces   | "Description is required"                                     |
+| `description` | At most 500 characters after trimming spaces | "Description must be 500 characters or fewer"                 |
+| `coords`      | Required object, not `null`                  | "Location is required"                                        |
+| `coords.lat`  | Required number                              | "Latitude must be a number"                                   |
+| `coords.lat`  | -90 to 90                                    | "Latitude must be between -90 and 90"                         |
+| `coords.lng`  | Required number                              | "Longitude must be a number"                                  |
+| `coords.lng`  | -180 to 180                                  | "Longitude must be between -180 and 180"                      |
+| anything else | Dropped silently                             | — (the API sets `id` and `createdAt` itself)                  |
+
+- Report every broken rule at once, not just the first
+- `field` in `details` is the path to the field, joined with dots (`coords.lat`)
 
 Models
 
-```ts
-// What the client sends
-const NewPinSchema = z.object({
-  type: z.enum(PIN_TYPES, {
-    error: (issue) =>
-      issue.input === undefined
-        ? "Type is required"
-        : `Type must be one of: ${PIN_TYPES.join(", ")}`,
-  }),
-  description: z
-    .string({ error: "Description is required" })
-    .trim()
-    .min(1, "Description is required")
-    .max(500, "Description must be 500 characters or fewer"),
-  coords: z.object(
-    {
-      lat: z
-        .number({ error: "Latitude must be a number" })
-        .min(-90, "Latitude must be between -90 and 90")
-        .max(90, "Latitude must be between -90 and 90"),
-      lng: z
-        .number({ error: "Longitude must be a number" })
-        .min(-180, "Longitude must be between -180 and 180")
-        .max(180, "Longitude must be between -180 and 180"),
-    },
-    { error: "Location is required" },
-  ),
-});
-type NewPin = z.infer<typeof NewPinSchema>;
-
-// What the API sends back
-interface Pin extends NewPin {
-  id: string; // randomUUID()
-  createdAt: string; // new Date().toISOString()
-}
-
-// Every error
-interface ApiError {
-  error: string;
-  details?: { field: string; message: string }[]; // 400 "Invalid pin" only
-}
-```
+- `NewPin` (what the client sends): `type`, `description`, `coords { lat, lng }`
+- `Pin` (what the API sends back): `NewPin` plus `id` (a UUID) and `createdAt` (an ISO date string)
+- `ApiError` (every error): `error`, plus `details` (a list of `{ field, message }`) on `400` "Invalid pin" only
+- Responses are sent as is, with no wrapper (no `status`, `message` or `data` keys)
 
 How a request flows through `app.ts`
 
@@ -84,9 +62,11 @@ flowchart TD
   B -- broken JSON --> X[Error handler]
   B --> C{Route matches?}
   C -- no --> N["404 handler<br/>404 Not found"]
-  C -- "POST /pins" --> V{"validate(NewPinSchema)"}
-  V -- fails --> E1["400 Invalid pin + details"]
-  V -- passes --> P["add id + createdAt, push to list<br/>201 Pin"]
+  C -- "POST /pins" --> J{"Content-Type is JSON?"}
+  J -- no --> E0["400 Send the pin as JSON"]
+  J -- yes --> V{"Pin passes the field rules?"}
+  V -- no --> E1["400 Invalid pin + details"]
+  V -- yes --> P["add id + createdAt, push to list<br/>201 Pin"]
   C -- "GET /pins" --> L["200 Pin[]"]
   C -- "GET /pins/:id" --> F{Found in list?}
   F -- no --> E2["404 Pin not found"]
@@ -99,28 +79,44 @@ flowchart TD
 
 Order in `app.ts`
 
-1. `express.json()`
-2. `app.get('/health', …)`
-3. `app.use('/pins', pinsRouter)`
-4. 404 handler: `app.use((req, res) => …)`
-5. Error handler: `app.use((err, req, res, next) => …)` (4 arguments, always last)
+1. JSON body parser
+2. `GET /health` route
+3. Pins router, mounted at `/pins`
+4. 404 handler
+5. Error handler (takes 4 arguments, always last)
 
-## Try it in Postman
+## Build checklist
 
-Assumes the API runs at `http://localhost:3000`.
+Each case below is one Postman request (left) and the response it should get (right). Done when Postman shows exactly that for every case.
 
-```http
-# Step 2 — Create a pin
-POST /pins
+- Base URL: `http://localhost:3000`
+- `id` and `createdAt` in responses will differ from the examples
+
+## `POST /pins`
+
 Content-Type: application/json
 
+- In Postman: Body → raw → JSON, unless the case says otherwise
+
+### Creates a pin from a valid request
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>201 Created</code></th></tr>
+<tr>
+<td>
+
+```json
 {
   "type": "drainage",
   "description": "Kerb near the drain fills fast in heavy rain",
   "coords": { "lat": -27.5098, "lng": 153.0331 }
 }
+```
 
-→ 201 Created
+</td>
+<td>
+
+```json
 {
   "id": "8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d",
   "type": "drainage",
@@ -130,21 +126,34 @@ Content-Type: application/json
 }
 ```
 
-```http
-# Step 2 — Create a pin with extra fields
-# zod drops fields it doesn't know about, so the API always sets its own id and date
-POST /pins
-Content-Type: application/json
+</td>
+</tr>
+</table>
 
+### Ignores a client-sent id, createdAt and other unknown fields
+
+- The API always sets its own `id` and `createdAt`
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>201 Created</code></th></tr>
+<tr>
+<td>
+
+```json
 {
   "id": "my-own-id",
   "createdAt": "1999-01-01T00:00:00.000Z",
+  "votes": 999,
   "type": "flooding",
   "description": "Water over the footpath after storms",
   "coords": { "lat": -27.5121, "lng": 153.0298 }
 }
+```
 
-→ 201 Created
+</td>
+<td>
+
+```json
 {
   "id": "2b7d4e11-9a3c-4f5e-8d21-7c6b5a4e3f2d",
   "type": "flooding",
@@ -154,14 +163,159 @@ Content-Type: application/json
 }
 ```
 
-```http
-# Step 2 — Bad pin (empty description)
-POST /pins
-Content-Type: application/json
+</td>
+</tr>
+</table>
 
-{ "type": "drainage", "description": "", "coords": { "lat": -27.5098, "lng": 153.0331 } }
+### Trims spaces around the description before saving
 
-→ 400 Bad Request
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>201 Created</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "wildlife",
+  "description": "   Possum in the park bins   ",
+  "coords": { "lat": -27.5098, "lng": 153.0331 }
+}
+```
+
+</td>
+<td>
+
+```json
+{
+  "id": "5c9e1f22-7b3d-4a6e-9f10-2d4c6b8a0e1f",
+  "type": "wildlife",
+  "description": "Possum in the park bins",
+  "coords": { "lat": -27.5098, "lng": 153.0331 },
+  "createdAt": "2026-10-24T09:32:00.000Z"
+}
+```
+
+</td>
+</tr>
+</table>
+
+### Accepts a description at the 500-character maximum
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>201 Created</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "drainage",
+  "description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "coords": { "lat": -27.5098, "lng": 153.0331 }
+}
+```
+
+</td>
+<td>
+
+```json
+{
+  "id": "e3a7c4d1-2f6b-4c8e-a9d0-1b2c3d4e5f60",
+  "type": "drainage",
+  "description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "coords": { "lat": -27.5098, "lng": 153.0331 },
+  "createdAt": "2026-10-24T09:33:00.000Z"
+}
+```
+
+</td>
+</tr>
+</table>
+
+### Accepts a description at the 1-character minimum
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>201 Created</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "none",
+  "description": "!",
+  "coords": { "lat": -27.5098, "lng": 153.0331 }
+}
+```
+
+</td>
+<td>
+
+```json
+{
+  "id": "a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+  "type": "none",
+  "description": "!",
+  "coords": { "lat": -27.5098, "lng": 153.0331 },
+  "createdAt": "2026-10-24T09:34:00.000Z"
+}
+```
+
+</td>
+</tr>
+</table>
+
+### Accepts coordinates exactly on the lat and lng limits
+
+- -90, 90, -180 and 180 are all allowed
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>201 Created</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "signage",
+  "description": "Edge of the map",
+  "coords": { "lat": 90, "lng": -180 }
+}
+```
+
+</td>
+<td>
+
+```json
+{
+  "id": "9d8c7b6a-5f4e-4d3c-b2a1-0f9e8d7c6b5a",
+  "type": "signage",
+  "description": "Edge of the map",
+  "coords": { "lat": 90, "lng": -180 },
+  "createdAt": "2026-10-24T09:35:00.000Z"
+}
+```
+
+</td>
+</tr>
+</table>
+
+### Rejects an empty description
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "drainage",
+  "description": "",
+  "coords": { "lat": -27.5098, "lng": 153.0331 }
+}
+```
+
+</td>
+<td>
+
+```json
 {
   "error": "Invalid pin",
   "details": [
@@ -170,15 +324,31 @@ Content-Type: application/json
 }
 ```
 
-```http
-# Step 2 — Bad pin (description is only spaces)
-# Trim the description before checking it, so "   " counts as empty
-POST /pins
-Content-Type: application/json
+</td>
+</tr>
+</table>
 
-{ "type": "drainage", "description": "   ", "coords": { "lat": -27.5098, "lng": 153.0331 } }
+### Rejects a description that is only spaces
 
-→ 400 Bad Request
+- Trimmed first, so `"   "` counts as empty
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "drainage",
+  "description": "   ",
+  "coords": { "lat": -27.5098, "lng": 153.0331 }
+}
+```
+
+</td>
+<td>
+
+```json
 {
   "error": "Invalid pin",
   "details": [
@@ -187,14 +357,29 @@ Content-Type: application/json
 }
 ```
 
-```http
-# Step 2 — Bad pin (description too long: 501 characters)
-POST /pins
-Content-Type: application/json
+</td>
+</tr>
+</table>
 
-{ "type": "drainage", "description": "aaaa…(501 characters)", "coords": { "lat": -27.5098, "lng": 153.0331 } }
+### Rejects a description over 500 characters
 
-→ 400 Bad Request
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "drainage",
+  "description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "coords": { "lat": -27.5098, "lng": 153.0331 }
+}
+```
+
+</td>
+<td>
+
+```json
 {
   "error": "Invalid pin",
   "details": [
@@ -203,14 +388,59 @@ Content-Type: application/json
 }
 ```
 
-```http
-# Step 2 — Bad pin (missing type)
-POST /pins
-Content-Type: application/json
+</td>
+</tr>
+</table>
 
-{ "description": "Kerb near the drain fills fast in heavy rain", "coords": { "lat": -27.5098, "lng": 153.0331 } }
+### Rejects a description that isn't text
 
-→ 400 Bad Request
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "drainage",
+  "description": 42,
+  "coords": { "lat": -27.5098, "lng": 153.0331 }
+}
+```
+
+</td>
+<td>
+
+```json
+{
+  "error": "Invalid pin",
+  "details": [
+    { "field": "description", "message": "Description is required" }
+  ]
+}
+```
+
+</td>
+</tr>
+</table>
+
+### Rejects a pin with no type
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "description": "Kerb near the drain fills fast in heavy rain",
+  "coords": { "lat": -27.5098, "lng": 153.0331 }
+}
+```
+
+</td>
+<td>
+
+```json
 {
   "error": "Invalid pin",
   "details": [
@@ -219,14 +449,29 @@ Content-Type: application/json
 }
 ```
 
-```http
-# Step 2 — Bad pin (type not in the list)
-POST /pins
-Content-Type: application/json
+</td>
+</tr>
+</table>
 
-{ "type": "magpies", "description": "Swooping magpie near the bus stop", "coords": { "lat": -27.5098, "lng": 153.0331 } }
+### Rejects a type that isn't in the pin type list
 
-→ 400 Bad Request
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "magpies",
+  "description": "Swooping magpie near the bus stop",
+  "coords": { "lat": -27.5098, "lng": 153.0331 }
+}
+```
+
+</td>
+<td>
+
+```json
 {
   "error": "Invalid pin",
   "details": [
@@ -235,15 +480,31 @@ Content-Type: application/json
 }
 ```
 
-```http
-# Step 2 — Bad pin (no location)
-# coords can be null in a saved pin (step 18), but a new pin must have one
-POST /pins
-Content-Type: application/json
+</td>
+</tr>
+</table>
 
-{ "type": "drainage", "description": "Kerb near the drain fills fast in heavy rain", "coords": null }
+### Rejects a pin with no location
 
-→ 400 Bad Request
+- `coords` can be `null` in a saved pin (step 18), but a new pin must have one
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "drainage",
+  "description": "Kerb near the drain fills fast in heavy rain",
+  "coords": null
+}
+```
+
+</td>
+<td>
+
+```json
 {
   "error": "Invalid pin",
   "details": [
@@ -252,15 +513,62 @@ Content-Type: application/json
 }
 ```
 
-```http
-# Step 2 — Bad pin (lat and lng not real places)
-# lat is -90 to 90, lng is -180 to 180
-POST /pins
-Content-Type: application/json
+</td>
+</tr>
+</table>
 
-{ "type": "drainage", "description": "Kerb near the drain fills fast in heavy rain", "coords": { "lat": -127.5, "lng": 253.0 } }
+### Rejects a location with no lng
 
-→ 400 Bad Request
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "drainage",
+  "description": "Kerb near the drain fills fast in heavy rain",
+  "coords": {
+    "lat": -27.5098
+  }
+}
+```
+
+</td>
+<td>
+
+```json
+{
+  "error": "Invalid pin",
+  "details": [
+    { "field": "coords.lng", "message": "Longitude must be a number" }
+  ]
+}
+```
+
+</td>
+</tr>
+</table>
+
+### Rejects lat and lng outside real-world ranges
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "drainage",
+  "description": "Kerb near the drain fills fast in heavy rain",
+  "coords": { "lat": -127.5, "lng": 253.0 }
+}
+```
+
+</td>
+<td>
+
+```json
 {
   "error": "Invalid pin",
   "details": [
@@ -270,14 +578,29 @@ Content-Type: application/json
 }
 ```
 
-```http
-# Step 2 — Bad pin (lat and lng sent as text)
-POST /pins
-Content-Type: application/json
+</td>
+</tr>
+</table>
 
-{ "type": "drainage", "description": "Kerb near the drain fills fast in heavy rain", "coords": { "lat": "-27.5098", "lng": "153.0331" } }
+### Rejects lat and lng sent as text instead of numbers
 
-→ 400 Bad Request
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "drainage",
+  "description": "Kerb near the drain fills fast in heavy rain",
+  "coords": { "lat": "-27.5098", "lng": "153.0331" }
+}
+```
+
+</td>
+<td>
+
+```json
 {
   "error": "Invalid pin",
   "details": [
@@ -287,15 +610,30 @@ Content-Type: application/json
 }
 ```
 
-```http
-# Step 2 — Bad pin (several problems at once)
-# Return every problem, not just the first, so the form can show them all
-POST /pins
-Content-Type: application/json
+</td>
+</tr>
+</table>
 
-{ "type": "magpies", "description": "" }
+### Reports every broken rule in one response
 
-→ 400 Bad Request
+- Every problem comes back, so the form can show them all
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "magpies",
+  "description": ""
+}
+```
+
+</td>
+<td>
+
+```json
 {
   "error": "Invalid pin",
   "details": [
@@ -306,36 +644,159 @@ Content-Type: application/json
 }
 ```
 
-```http
-# Step 2 — Broken JSON (missing closing brace)
-# express.json() throws before your route runs; the error handler turns it into a 400
-POST /pins
-Content-Type: application/json
+</td>
+</tr>
+</table>
 
+### Rejects an empty object and lists every required field
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
+
+```json
+{}
+```
+
+</td>
+<td>
+
+```json
+{
+  "error": "Invalid pin",
+  "details": [
+    { "field": "type", "message": "Type is required" },
+    { "field": "description", "message": "Description is required" },
+    { "field": "coords", "message": "Location is required" }
+  ]
+}
+```
+
+</td>
+</tr>
+</table>
+
+### Rejects broken JSON with a 400, not a 500
+
+- The JSON parser fails before the route runs; the error handler turns it into a `400`
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
+
+```text
 { "type": "drainage", "description": "Kerb near the drain"
+```
 
-→ 400 Bad Request
+</td>
+<td>
+
+```json
 { "error": "Request body isn't valid JSON" }
 ```
 
-```http
-# Step 2 — Body sent without the JSON header
-# In Postman: Body → raw → Text instead of JSON. express.json() skips it, so req.body is undefined
-POST /pins
+</td>
+</tr>
+</table>
+
+### Rejects a body that isn't sent as JSON
+
+- In Postman: Body → raw → Text instead of JSON
+
 Content-Type: text/plain
 
-{ "type": "drainage", "description": "Kerb near the drain fills fast in heavy rain", "coords": { "lat": -27.5098, "lng": 153.0331 } }
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
 
-→ 400 Bad Request
+```json
+{
+  "type": "drainage",
+  "description": "Kerb near the drain fills fast in heavy rain",
+  "coords": { "lat": -27.5098, "lng": 153.0331 }
+}
+```
+
+</td>
+<td>
+
+```json
 { "error": "Send the pin as JSON (Content-Type: application/json)" }
 ```
 
-```http
-# Step 2 — List all pins
-# Full pins for now; step 4 trims this to id, type and coords
-GET /pins
+</td>
+</tr>
+</table>
 
-→ 200 OK
+### Rejects a request with no body
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
+<tr>
+<td>
+
+None (in Postman: Body → none)
+
+</td>
+<td>
+
+```json
+{ "error": "Send the pin as JSON (Content-Type: application/json)" }
+```
+
+</td>
+</tr>
+</table>
+
+### Hides unexpected errors behind a generic 500
+
+- To try it: temporarily throw an error inside the `POST /pins` route
+- Never send the stack trace
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>500 Internal Server Error</code></th></tr>
+<tr>
+<td>
+
+```json
+{
+  "type": "drainage",
+  "description": "Kerb near the drain fills fast in heavy rain",
+  "coords": { "lat": -27.5098, "lng": 153.0331 }
+}
+```
+
+</td>
+<td>
+
+```json
+{ "error": "Something went wrong" }
+```
+
+</td>
+</tr>
+</table>
+
+## `GET /pins`
+
+### Returns every saved pin
+
+- Full pins for now; step 4 trims this to `id`, `type` and `coords`
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>200 OK</code></th></tr>
+<tr>
+<td>
+
+None
+
+</td>
+<td>
+
+```json
 [
   {
     "id": "8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d",
@@ -354,21 +815,74 @@ GET /pins
 ]
 ```
 
-```http
-# Step 2 — List pins when there are none (fresh start, or after a restart)
-# An empty list is still a success: 200, not 404
-GET /pins
+</td>
+</tr>
+</table>
 
-→ 200 OK
+### Returns an empty list, not a 404, when there are no pins
+
+- An empty list is still a success: `200`, not `404`
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>200 OK</code></th></tr>
+<tr>
+<td>
+
+None
+
+</td>
+<td>
+
+```json
 []
 ```
 
-```http
-# Step 2 — Get one pin
-# Same shape as the create response; step 5 adds votes, replies and author
-GET /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d
+</td>
+</tr>
+</table>
 
-→ 200 OK
+### Hides unexpected errors behind a generic 500
+
+- To try it: temporarily throw an error inside the `GET /pins` route
+- Never send the stack trace
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>500 Internal Server Error</code></th></tr>
+<tr>
+<td>
+
+None
+
+</td>
+<td>
+
+```json
+{ "error": "Something went wrong" }
+```
+
+</td>
+</tr>
+</table>
+
+## `GET /pins/:id`
+
+### Returns the pin with a matching id
+
+- Same shape as the create response; step 5 adds votes, replies and author
+
+Request: `GET /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d`
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>200 OK</code></th></tr>
+<tr>
+<td>
+
+None
+
+</td>
+<td>
+
+```json
 {
   "id": "8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d",
   "type": "drainage",
@@ -378,37 +892,130 @@ GET /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d
 }
 ```
 
-```http
-# Step 2 — Pin that doesn't exist
-GET /pins/does-not-exist
+</td>
+</tr>
+</table>
 
-→ 404 Not Found
+### Returns 404 for an id that was never created
+
+Request: `GET /pins/does-not-exist`
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>404 Not Found</code></th></tr>
+<tr>
+<td>
+
+None
+
+</td>
+<td>
+
+```json
 { "error": "Pin not found" }
 ```
 
-```http
-# Step 2 — Pin that used to exist (made before the API restarted)
-# The in-memory list empties on restart; step 3 fixes this
-GET /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d
+</td>
+</tr>
+</table>
 
-→ 404 Not Found
+### Returns 404 for a pin lost when the API restarted
+
+- The in-memory list empties on restart; step 3 fixes this
+
+Request: `GET /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d`
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>404 Not Found</code></th></tr>
+<tr>
+<td>
+
+None
+
+</td>
+<td>
+
+```json
 { "error": "Pin not found" }
 ```
 
-```http
-# Step 2 — Method the API doesn't support yet
-# Express has no route for it, so it falls through to the 404 handler
-DELETE /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d
+</td>
+</tr>
+</table>
 
-→ 404 Not Found
+### Hides unexpected errors behind a generic 500
+
+- To try it: temporarily throw an error inside the `GET /pins/:id` route
+- Never send the stack trace
+
+Request: `GET /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d`
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>500 Internal Server Error</code></th></tr>
+<tr>
+<td>
+
+None
+
+</td>
+<td>
+
+```json
+{ "error": "Something went wrong" }
+```
+
+</td>
+</tr>
+</table>
+
+## Any other method or path
+
+### Returns 404 for a method with no route
+
+- No route matches, so it falls through to the 404 handler
+
+Request: `DELETE /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d`
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>404 Not Found</code></th></tr>
+<tr>
+<td>
+
+None
+
+</td>
+<td>
+
+```json
 { "error": "Not found" }
 ```
 
-```http
-# Step 2 — Something breaks inside the API
-# Any thrown error ends up here; never send the stack trace
-GET /pins
+</td>
+</tr>
+</table>
 
-→ 500 Internal Server Error
-{ "error": "Something went wrong" }
+### Returns 404 for a path with no route
+
+Request: `GET /pinz`
+
+<table class="req-res">
+<tr><th>Request body</th><th>Response body — <code>404 Not Found</code></th></tr>
+<tr>
+<td>
+
+None
+
+</td>
+<td>
+
+```json
+{ "error": "Not found" }
 ```
+
+</td>
+</tr>
+</table>
+
+## Every response
+
+- Sent as is, with no `status` / `message` / `data` wrapper
+- `500`s never include the stack trace
