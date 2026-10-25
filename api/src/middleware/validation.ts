@@ -29,5 +29,7 @@ export const validatePinBody =
       });
     }
     req.body = result.data;
-    next();
+
+    // add return for typescript
+    return next();
   };

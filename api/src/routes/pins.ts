@@ -49,8 +49,6 @@ pinsRouter.post(
     // TODO to update with database connection
     pinStore.push(newPin);
 
-    res.status(201).json({
-      newPin,
-    });
+    res.status(201).json(newPin);
   }
 );

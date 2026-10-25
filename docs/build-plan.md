@@ -55,7 +55,7 @@ By the end, the API stores pins in a real database.
    - How: set up a Node + Express + TypeScript project; add a health endpoint; run it on your machine.
    - You'll learn: what a server and a route are.
    - Done when: calling the health endpoint returns OK.
-2. **Create and read pins (no database yet)**
+2. **Create and read pins (no database yet)** ✅ Done 25/10/2026
    - What it does: the API can add a pin, list all pins and return one pin.
    - How: keep pins in a list in memory; add endpoints to create, list and get one; check new pins with zod (type is required, description isn't empty or too long, location has a lat and lng).
    - Naming: one path per resource, and the HTTP method says what to do. `POST /pins` adds a pin, `GET /pins` lists them, `GET /pins/:id` gets one. Avoid `/pin` or `/pins/all`: `/pins/all` would clash with `/pins/:id`, because Express would read "all" as a pin id.
