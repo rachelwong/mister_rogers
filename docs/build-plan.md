@@ -50,7 +50,7 @@ Each phase ends with example requests and responses to aim for in Postman. They 
 
 By the end, the API stores pins in a real database.
 
-1. **Check the API is running**
+1. **Check the API is running** ✅ Done 25/10/2026
    - What it does: the API answers "I'm OK" when you ask it.
    - How: set up a Node + Express + TypeScript project; add a health endpoint; run it on your machine.
    - You'll learn: what a server and a route are.

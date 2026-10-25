@@ -1,12 +1,16 @@
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
-# production
-*/build
-*/dist
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+
 
 # dependencies
-*/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -18,9 +22,20 @@
 # testing
 /coverage
 
+# lint / caches
+.eslintcache
+
+# logs
+*.log
+npm-debug.log*
+
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+.idea/

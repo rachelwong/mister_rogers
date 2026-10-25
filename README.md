@@ -63,3 +63,25 @@ Mobile screens, 390 × 844. Source files are in [docs/wireframes/source](docs/wi
 |                             Error                             |
 | :-----------------------------------------------------------: |
 | <img src="docs/wireframes/Error.png" width="240" alt="Error"> |
+
+## Backend
+
+- using typescript version 6.0 for compatibilty with eslint
+
+### To run
+
+1. Add `.env` inside root level of `/api` folder
+2. Add below example `.env` configuration
+
+```
+PORT=3000
+CORS_ORIGIN=http://localhost:5173
+NODE_ENV=development
+```
+
+3. Run below terminal commands inside `/api` folder
+
+```
+npm i
+npm run dev
+```
