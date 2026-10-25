@@ -9,14 +9,8 @@ export const PIN_TYPE = {
   RECREATION: 'recreation',
   DISABILITY: 'disability',
   SIGNAGE: 'signage',
+  NONE: 'none',
 } as const;
-
-export type PinType = (typeof PIN_TYPE)[keyof typeof PIN_TYPE];
-
-// inactive = deleted
-// draft = not approved
-// active = approved / visible
-export type PinStatus = 'draft' | 'active' | 'inactive';
 
 export const PIN_VALIDATION = {
   DESCRIPTION: {

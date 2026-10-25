@@ -7,7 +7,6 @@ import {
   CreatePinSchema,
   type CreatePinRequest,
 } from '../schemas/pinSchema.ts';
-import { getCurrentDateTime } from '../utils/pinUtils.ts';
 
 export const pinsRouter: Router = Router();
 
@@ -21,11 +20,12 @@ pinsRouter.get('/:id', (req, res: Response) => {
   const id = req.params.id;
   const selectedPin = pinStore.find((x) => x.id === id);
   if (!selectedPin) {
-    res.status(404).json({
+    // return to prevent code flow continuing onwards
+    return res.status(404).json({
       error: 'Pin not found',
     });
   }
-  res.status(200).json(selectedPin);
+  return res.status(200).json(selectedPin);
 });
 
 pinsRouter.post(
@@ -36,10 +36,11 @@ pinsRouter.post(
     const { description, coords, type } = req.body;
 
     const id = randomUUID();
-    const createdAt = getCurrentDateTime();
+    const createdAt = new Date().toISOString();
+
     const newPin = {
       id,
-      description: description.trim(),
+      description, // don't trim here, trim in schema
       coords,
       type,
       createdAt,
@@ -49,9 +50,7 @@ pinsRouter.post(
     pinStore.push(newPin);
 
     res.status(201).json({
-      status: 'success',
-      message: 'Pin created successfully',
-      data: newPin,
+      newPin,
     });
   }
 );

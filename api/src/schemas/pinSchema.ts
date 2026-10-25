@@ -1,16 +1,15 @@
 import * as z from 'zod';
-import type { Pin } from '../types/pin.ts';
-import { PIN_TYPE, PIN_VALIDATION, type PinType } from '../utils/constants.ts';
+import { PIN_TYPE, PIN_VALIDATION } from '../utils/constants.ts';
 
+// response schema more useful on the FE
+// to check what comes back from the API at runtime
 export const CreatePinSchema = z.object({
-  type: z
-    .string({
-      error: (issue) =>
-        issue.input === undefined ? 'Type is required' : 'Invalid type',
-    })
-    .refine((pinType): pinType is PinType => {
-      return Object.values(PIN_TYPE).includes(pinType as PinType);
-    }),
+  type: z.enum(PIN_TYPE, {
+    error: (issue) =>
+      issue.input === undefined
+        ? 'Type is required'
+        : `Type must be one of: ${Object.values(PIN_TYPE).join(', ')}`,
+  }),
   description: z
     .string({
       error: (issue) =>
@@ -18,6 +17,9 @@ export const CreatePinSchema = z.object({
           ? 'Description is required'
           : 'Invalid description format',
     })
+    .trim() // trim here before checking the length
+    .min(1, { error: 'Description is required', abort: true }) // add check for no description and abort to get just this error
+    // https://zod.dev/api?id=abort#abort
     .max(PIN_VALIDATION.DESCRIPTION.MAX, {
       message: `Pin description must be at most ${PIN_VALIDATION.DESCRIPTION.MAX} characters long.`,
     })
@@ -27,12 +29,7 @@ export const CreatePinSchema = z.object({
   coords: z.object(
     {
       lat: z
-        .number({
-          error: (issue) =>
-            !Number.isNaN(issue.input)
-              ? 'Latitude must be a number'
-              : 'Invalid latitude',
-        })
+        .number({ error: 'Latitude must be a number' })
         .min(PIN_VALIDATION.LATITUDE.MIN, {
           message: `Latitude must be between ${PIN_VALIDATION.LATITUDE.MIN} and ${PIN_VALIDATION.LATITUDE.MAX}`,
         })
@@ -40,12 +37,7 @@ export const CreatePinSchema = z.object({
           message: `Latitude must be between ${PIN_VALIDATION.LATITUDE.MIN} and ${PIN_VALIDATION.LATITUDE.MAX}`,
         }),
       lng: z
-        .number({
-          error: (issue) =>
-            !Number.isNaN(issue.input)
-              ? 'Longitude must be a number'
-              : 'Invalid longitude',
-        })
+        .number({ error: 'Longitude must be a number' })
         .min(PIN_VALIDATION.LONGITUDE.MIN, {
           message: `Longitude must be between ${PIN_VALIDATION.LONGITUDE.MIN} and ${PIN_VALIDATION.LONGITUDE.MAX}`,
         })
@@ -58,36 +50,3 @@ export const CreatePinSchema = z.object({
 });
 
 export type CreatePinRequest = z.infer<typeof CreatePinSchema>;
-
-export const CreatePinResponseSchema = z.object({
-  id: z.string({
-    error: (issue) =>
-      issue.input === undefined
-        ? 'Pin id is required'
-        : 'Invalid pin id format',
-  }),
-  ...CreatePinSchema.shape,
-  createdAt: z.iso
-    .datetime({
-      offset: true,
-      message: 'Invalid ISO datetime format.',
-    })
-    .refine(
-      (val) => {
-        const inputDate = new Date(val);
-        // Compares the absolute timestamp against the current exact moment in time
-        return !isNaN(inputDate.getTime()) && inputDate.getTime() <= Date.now();
-      },
-      {
-        message: 'Created datetime cannot be in the future',
-      }
-    ),
-}) satisfies z.ZodType<Pin>;
-
-export const PinTypeObjectSchema = z.object(
-  Object.fromEntries(
-    Object.entries(PIN_TYPE).map(([key, value]) => [key, z.literal(value)])
-  ) as { [K in keyof typeof PIN_TYPE]: z.ZodLiteral<(typeof PIN_TYPE)[K]> }
-);
-
-export type PinTypeSchema = z.infer<typeof PinTypeObjectSchema>;

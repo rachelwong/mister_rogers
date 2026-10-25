@@ -1,9 +1,11 @@
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 
 export const errorHandler = (
   err: unknown,
   _req: Request,
-  res: Response
+  res: Response,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _next: NextFunction // needed, even if unused as otherwise errorhandler will be treated as a normal middleware
 ): void => {
   console.error('Error catch all', err);
 
@@ -15,12 +17,7 @@ export const errorHandler = (
     res.status(400).json({ error: 'Request body is not valid JSON' });
     return;
   }
-  if (err instanceof SyntaxError) {
-    res.status(400).json({
-      error: 'Send the pin as JSON (Content-Type: application/json)',
-    });
-    return;
-  }
+  // check content type separately
   res.status(500).json({
     error: 'Something went wrong',
   });

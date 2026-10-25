@@ -19,31 +19,31 @@ Endpoints
 
 Error codes
 
-| Code  | `error` message                                         | When                                             | Endpoint        |
-| ----- | ------------------------------------------------------- | ------------------------------------------------ | --------------- |
-| `400` | "Invalid pin" + `details`                               | A field breaks a rule below                      | `POST /pins`    |
-| `400` | "Request body isn't valid JSON"                         | The JSON is broken                               | `POST /pins`    |
-| `400` | "Send the pin as JSON (Content-Type: application/json)" | `Content-Type` isn't `application/json`          | `POST /pins`    |
-| `404` | "Pin not found"                                         | No pin has that id                               | `GET /pins/:id` |
-| `404` | "Not found"                                             | No route matches the method and path             | any             |
-| `500` | "Something went wrong"                                  | Anything thrown that isn't handled; no stack trace | any           |
+| Code  | `error` message                                         | When                                               | Endpoint        |
+| ----- | ------------------------------------------------------- | -------------------------------------------------- | --------------- |
+| `400` | "Invalid pin" + `details`                               | A field breaks a rule below                        | `POST /pins`    |
+| `400` | "Request body isn't valid JSON"                         | The JSON is broken                                 | `POST /pins`    |
+| `400` | "Send the pin as JSON (Content-Type: application/json)" | `Content-Type` isn't `application/json`            | `POST /pins`    |
+| `404` | "Pin not found"                                         | No pin has that id                                 | `GET /pins/:id` |
+| `404` | "Not found"                                             | No route matches the method and path               | any             |
+| `500` | "Something went wrong"                                  | Anything thrown that isn't handled; no stack trace | any             |
 
 Field rules for `POST /pins`
 
-| Field         | Rule                                         | Message when it breaks                                        |
-| ------------- | -------------------------------------------- | ------------------------------------------------------------- |
-| `type`        | Required                                     | "Type is required"                                            |
+| Field         | Rule                                         | Message when it breaks                                                                                                          |
+| ------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `type`        | Required                                     | "Type is required"                                                                                                              |
 | `type`        | One of `PIN_TYPES`                           | "Type must be one of: drainage, flooding, wildlife, amenity, children, parking, traffic, recreation, disability, signage, none" |
-| `description` | Required text                                | "Description is required"                                     |
-| `description` | Not empty after trimming spaces              | "Description is required"                                     |
-| `description` | At least 10 characters after trimming spaces | "Description must be at least 10 characters"                  |
-| `description` | At most 500 characters after trimming spaces | "Description must be 500 characters or fewer"                 |
-| `coords`      | Required object, not `null`                  | "Location is required"                                        |
-| `coords.lat`  | Required number                              | "Latitude must be a number"                                   |
-| `coords.lat`  | -90 to 90                                    | "Latitude must be between -90 and 90"                         |
-| `coords.lng`  | Required number                              | "Longitude must be a number"                                  |
-| `coords.lng`  | -180 to 180                                  | "Longitude must be between -180 and 180"                      |
-| anything else | Dropped silently                             | — (the API sets `id` and `createdAt` itself)                  |
+| `description` | Required text                                | "Description is required"                                                                                                       |
+| `description` | Not empty after trimming spaces              | "Description is required"                                                                                                       |
+| `description` | At least 10 characters after trimming spaces | "Description must be at least 10 characters"                                                                                    |
+| `description` | At most 500 characters after trimming spaces | "Description must be 500 characters or fewer"                                                                                   |
+| `coords`      | Required object, not `null`                  | "Location is required"                                                                                                          |
+| `coords.lat`  | Required number                              | "Latitude must be a number"                                                                                                     |
+| `coords.lat`  | -90 to 90                                    | "Latitude must be between -90 and 90"                                                                                           |
+| `coords.lng`  | Required number                              | "Longitude must be a number"                                                                                                    |
+| `coords.lng`  | -180 to 180                                  | "Longitude must be between -180 and 180"                                                                                        |
+| anything else | Dropped silently                             | — (the API sets `id` and `createdAt` itself)                                                                                    |
 
 - Report every broken rule at once, not just the first
 - `field` in `details` is the path to the field, joined with dots (`coords.lat`)
@@ -342,9 +342,7 @@ Content-Type: application/json
 ```json
 {
   "error": "Invalid pin",
-  "details": [
-    { "field": "description", "message": "Description is required" }
-  ]
+  "details": [{ "field": "description", "message": "Description is required" }]
 }
 ```
 
@@ -374,9 +372,7 @@ Content-Type: application/json
 ```json
 {
   "error": "Invalid pin",
-  "details": [
-    { "field": "description", "message": "Description is required" }
-  ]
+  "details": [{ "field": "description", "message": "Description is required" }]
 }
 ```
 
@@ -408,7 +404,10 @@ Content-Type: application/json
 {
   "error": "Invalid pin",
   "details": [
-    { "field": "description", "message": "Description must be at least 10 characters" }
+    {
+      "field": "description",
+      "message": "Description must be at least 10 characters"
+    }
   ]
 }
 ```
@@ -453,7 +452,10 @@ Content-Type: application/json
 {
   "error": "Invalid pin",
   "details": [
-    { "field": "description", "message": "Description must be 500 characters or fewer" }
+    {
+      "field": "description",
+      "message": "Description must be 500 characters or fewer"
+    }
   ]
 }
 ```
@@ -482,9 +484,7 @@ Content-Type: application/json
 ```json
 {
   "error": "Invalid pin",
-  "details": [
-    { "field": "description", "message": "Description is required" }
-  ]
+  "details": [{ "field": "description", "message": "Description is required" }]
 }
 ```
 
@@ -511,9 +511,7 @@ Content-Type: application/json
 ```json
 {
   "error": "Invalid pin",
-  "details": [
-    { "field": "type", "message": "Type is required" }
-  ]
+  "details": [{ "field": "type", "message": "Type is required" }]
 }
 ```
 
@@ -542,7 +540,10 @@ Content-Type: application/json
 {
   "error": "Invalid pin",
   "details": [
-    { "field": "type", "message": "Type must be one of: drainage, flooding, wildlife, amenity, children, parking, traffic, recreation, disability, signage, none" }
+    {
+      "field": "type",
+      "message": "Type must be one of: drainage, flooding, wildlife, amenity, children, parking, traffic, recreation, disability, signage, none"
+    }
   ]
 }
 ```
@@ -573,9 +574,7 @@ Content-Type: application/json
 ```json
 {
   "error": "Invalid pin",
-  "details": [
-    { "field": "coords", "message": "Location is required" }
-  ]
+  "details": [{ "field": "coords", "message": "Location is required" }]
 }
 ```
 
@@ -637,7 +636,10 @@ Content-Type: application/json
   "error": "Invalid pin",
   "details": [
     { "field": "coords.lat", "message": "Latitude must be between -90 and 90" },
-    { "field": "coords.lng", "message": "Longitude must be between -180 and 180" }
+    {
+      "field": "coords.lng",
+      "message": "Longitude must be between -180 and 180"
+    }
   ]
 }
 ```
@@ -699,7 +701,10 @@ Content-Type: application/json
 {
   "error": "Invalid pin",
   "details": [
-    { "field": "type", "message": "Type must be one of: drainage, flooding, wildlife, amenity, children, parking, traffic, recreation, disability, signage, none" },
+    {
+      "field": "type",
+      "message": "Type must be one of: drainage, flooding, wildlife, amenity, children, parking, traffic, recreation, disability, signage, none"
+    },
     { "field": "description", "message": "Description is required" },
     { "field": "coords", "message": "Location is required" }
   ]
@@ -1025,7 +1030,7 @@ None
 
 ### Returns 404 for a path with no route
 
-Request: `GET /pinz`
+Request: `GET /pins`
 
 <div class="req-res" style="display: flex; gap: 16px; width: 100%;">
 <div style="flex: 1 1 0; min-width: 0;">

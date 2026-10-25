@@ -11,7 +11,8 @@ export const requireJson = (
       error: 'Send the pin as JSON (Content-Type: application/json)',
     });
   }
-  next();
+  // add return here for typescript
+  return next();
 };
 
 export const validatePinBody =
@@ -20,7 +21,7 @@ export const validatePinBody =
     const result = schema.safeParse(req.body);
     if (!result.success) {
       return res.status(400).json({
-        status: 'Invalid pin',
+        error: 'Invalid pin',
         details: result.error.issues.map((issue) => ({
           field: issue.path.join('.'),
           message: issue.message,
