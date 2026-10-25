@@ -1,13 +1,20 @@
 import express, { type Express, type Request, type Response } from 'express';
-import type { Config } from './types/config.ts';
+import { errorHandler } from './middleware/errorHandler.ts';
+import { pinsRouter } from './routes/pins.ts';
 
-const createApp = (config: Config): Express => {
+const createApp = (): Express => {
   const app = express();
-  console.log('config', config);
+  app.use(express.json()); // Parses application/json
+  app.use(express.urlencoded({ extended: true })); // Parses form submissions
+
   app.get('/health', (_: Request, res: Response) => {
-    console.log('GET /health');
     res.status(200).json({ status: 'ok' });
   });
+
+  app.use('/pins', pinsRouter);
+
+  app.use(errorHandler);
+
   return app;
 };
 

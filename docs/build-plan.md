@@ -740,7 +740,7 @@ export type Coords = {
 // What a user sends to create a pin (step 2)
 export interface NewPin {
   type: PinType;
-  description: string; // 1–500 characters
+  description: string; // 10–500 characters
   coords: Coords;
 }
 

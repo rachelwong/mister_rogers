@@ -8,7 +8,7 @@ const config: Config = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
 };
 
-const app = createApp(config);
+const app = createApp();
 
 const httpServer = http.createServer(app);
 
