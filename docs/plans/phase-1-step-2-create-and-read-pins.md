@@ -35,7 +35,8 @@ Field rules for `POST /pins`
 | `type`        | Required                                     | "Type is required"                                            |
 | `type`        | One of `PIN_TYPES`                           | "Type must be one of: drainage, flooding, wildlife, amenity, children, parking, traffic, recreation, disability, signage, none" |
 | `description` | Required text                                | "Description is required"                                     |
-| `description` | At least 1 character after trimming spaces   | "Description is required"                                     |
+| `description` | Not empty after trimming spaces              | "Description is required"                                     |
+| `description` | At least 10 characters after trimming spaces | "Description must be at least 10 characters"                  |
 | `description` | At most 500 characters after trimming spaces | "Description must be 500 characters or fewer"                 |
 | `coords`      | Required object, not `null`                  | "Location is required"                                        |
 | `coords.lat`  | Required number                              | "Latitude must be a number"                                   |
@@ -254,7 +255,9 @@ Content-Type: application/json
 </div>
 </div>
 
-### Accepts a description at the 1-character minimum
+### Accepts a description at the 10-character minimum
+
+- `"Broken tap"` is exactly 10 characters
 
 <div class="req-res" style="display: flex; gap: 16px; width: 100%;">
 <div style="flex: 1 1 0; min-width: 0;">
@@ -263,7 +266,7 @@ Content-Type: application/json
 ```json
 {
   "type": "none",
-  "description": "!",
+  "description": "Broken tap",
   "coords": { "lat": -27.5098, "lng": 153.0331 }
 }
 ```
@@ -276,7 +279,7 @@ Content-Type: application/json
 {
   "id": "a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
   "type": "none",
-  "description": "!",
+  "description": "Broken tap",
   "coords": { "lat": -27.5098, "lng": 153.0331 },
   "createdAt": "2026-10-24T09:34:00.000Z"
 }
@@ -296,7 +299,7 @@ Content-Type: application/json
 ```json
 {
   "type": "signage",
-  "description": "Edge of the map",
+  "description": "Sign at the edge of the map",
   "coords": { "lat": 90, "lng": -180 }
 }
 ```
@@ -309,7 +312,7 @@ Content-Type: application/json
 {
   "id": "9d8c7b6a-5f4e-4d3c-b2a1-0f9e8d7c6b5a",
   "type": "signage",
-  "description": "Edge of the map",
+  "description": "Sign at the edge of the map",
   "coords": { "lat": 90, "lng": -180 },
   "createdAt": "2026-10-24T09:35:00.000Z"
 }
@@ -373,6 +376,39 @@ Content-Type: application/json
   "error": "Invalid pin",
   "details": [
     { "field": "description", "message": "Description is required" }
+  ]
+}
+```
+
+</div>
+</div>
+
+### Rejects a description under 10 characters
+
+- `"Bad drain"` is 9 characters
+- Spaces are trimmed first, so `"   Bad drain   "` is also 9
+
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
+
+```json
+{
+  "type": "drainage",
+  "description": "Bad drain",
+  "coords": { "lat": -27.5098, "lng": 153.0331 }
+}
+```
+
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
+
+```json
+{
+  "error": "Invalid pin",
+  "details": [
+    { "field": "description", "message": "Description must be at least 10 characters" }
   ]
 }
 ```
