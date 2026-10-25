@@ -100,10 +100,9 @@ Content-Type: application/json
 
 ### Creates a pin from a valid request
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>201 Created</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -113,8 +112,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>201 Created</code></strong>
 
 ```json
 {
@@ -126,18 +126,16 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Ignores a client-sent id, createdAt and other unknown fields
 
 - The API always sets its own `id` and `createdAt`
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>201 Created</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -150,8 +148,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>201 Created</code></strong>
 
 ```json
 {
@@ -163,16 +162,14 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Trims spaces around the description before saving
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>201 Created</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -182,8 +179,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>201 Created</code></strong>
 
 ```json
 {
@@ -195,48 +193,72 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Accepts a description at the 500-character maximum
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>201 Created</code></th></tr>
-<tr>
-<td>
+- `description` is one unbroken string of 500 `a`s, split into lines of 40 here so it fits on screen
+- In Postman, send it as one line with no spaces or line breaks
+
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
   "type": "drainage",
-  "description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaa",
   "coords": { "lat": -27.5098, "lng": 153.0331 }
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>201 Created</code></strong>
 
 ```json
 {
   "id": "e3a7c4d1-2f6b-4c8e-a9d0-1b2c3d4e5f60",
   "type": "drainage",
-  "description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaa",
   "coords": { "lat": -27.5098, "lng": 153.0331 },
   "createdAt": "2026-10-24T09:33:00.000Z"
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Accepts a description at the 1-character minimum
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>201 Created</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -246,8 +268,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>201 Created</code></strong>
 
 ```json
 {
@@ -259,18 +282,16 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Accepts coordinates exactly on the lat and lng limits
 
 - -90, 90, -180 and 180 are all allowed
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>201 Created</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -280,8 +301,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>201 Created</code></strong>
 
 ```json
 {
@@ -293,16 +315,14 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Rejects an empty description
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -312,8 +332,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 {
@@ -324,18 +345,16 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Rejects a description that is only spaces
 
 - Trimmed first, so `"   "` counts as empty
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -345,8 +364,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 {
@@ -357,27 +377,41 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Rejects a description over 500 characters
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
+- `description` is one unbroken string of 501 `a`s, split into lines of 40 here so it fits on screen
+- In Postman, send it as one line with no spaces or line breaks
+
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
   "type": "drainage",
-  "description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                   aaaaaaaaaaaaaaaaaaaaa",
   "coords": { "lat": -27.5098, "lng": 153.0331 }
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 {
@@ -388,16 +422,14 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Rejects a description that isn't text
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -407,8 +439,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 {
@@ -419,16 +452,14 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Rejects a pin with no type
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -437,8 +468,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 {
@@ -449,16 +481,14 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Rejects a type that isn't in the pin type list
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -468,8 +498,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 {
@@ -480,18 +511,16 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Rejects a pin with no location
 
 - `coords` can be `null` in a saved pin (step 18), but a new pin must have one
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -501,8 +530,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 {
@@ -513,16 +543,14 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Rejects a location with no lng
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -534,8 +562,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 {
@@ -546,16 +575,14 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Rejects lat and lng outside real-world ranges
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -565,8 +592,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 {
@@ -578,16 +606,14 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Rejects lat and lng sent as text instead of numbers
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -597,8 +623,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 {
@@ -610,18 +637,16 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Reports every broken rule in one response
 
 - Every problem comes back, so the form can show them all
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -630,8 +655,9 @@ Content-Type: application/json
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 {
@@ -644,23 +670,22 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Rejects an empty object and lists every required field
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {}
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 {
@@ -673,33 +698,31 @@ Content-Type: application/json
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Rejects broken JSON with a 400, not a 500
 
 - The JSON parser fails before the route runs; the error handler turns it into a `400`
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```text
 { "type": "drainage", "description": "Kerb near the drain"
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 { "error": "Request body isn't valid JSON" }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Rejects a body that isn't sent as JSON
 
@@ -707,10 +730,9 @@ Content-Type: application/json
 
 Content-Type: text/plain
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -720,46 +742,42 @@ Content-Type: text/plain
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 { "error": "Send the pin as JSON (Content-Type: application/json)" }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Rejects a request with no body
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>400 Bad Request</code></th></tr>
-<tr>
-<td>
-
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 None (in Postman: Body → none)
-
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>400 Bad Request</code></strong>
 
 ```json
 { "error": "Send the pin as JSON (Content-Type: application/json)" }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Hides unexpected errors behind a generic 500
 
 - To try it: temporarily throw an error inside the `POST /pins` route
 - Never send the stack trace
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>500 Internal Server Error</code></th></tr>
-<tr>
-<td>
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 
 ```json
 {
@@ -769,16 +787,16 @@ None (in Postman: Body → none)
 }
 ```
 
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>500 Internal Server Error</code></strong>
 
 ```json
 { "error": "Something went wrong" }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ## `GET /pins`
 
@@ -786,15 +804,13 @@ None (in Postman: Body → none)
 
 - Full pins for now; step 4 trims this to `id`, `type` and `coords`
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>200 OK</code></th></tr>
-<tr>
-<td>
-
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 None
-
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>200 OK</code></strong>
 
 ```json
 [
@@ -815,54 +831,47 @@ None
 ]
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Returns an empty list, not a 404, when there are no pins
 
 - An empty list is still a success: `200`, not `404`
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>200 OK</code></th></tr>
-<tr>
-<td>
-
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 None
-
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>200 OK</code></strong>
 
 ```json
 []
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Hides unexpected errors behind a generic 500
 
 - To try it: temporarily throw an error inside the `GET /pins` route
 - Never send the stack trace
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>500 Internal Server Error</code></th></tr>
-<tr>
-<td>
-
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 None
-
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>500 Internal Server Error</code></strong>
 
 ```json
 { "error": "Something went wrong" }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ## `GET /pins/:id`
 
@@ -872,15 +881,13 @@ None
 
 Request: `GET /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d`
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>200 OK</code></th></tr>
-<tr>
-<td>
-
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 None
-
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>200 OK</code></strong>
 
 ```json
 {
@@ -892,31 +899,27 @@ None
 }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Returns 404 for an id that was never created
 
 Request: `GET /pins/does-not-exist`
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>404 Not Found</code></th></tr>
-<tr>
-<td>
-
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 None
-
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>404 Not Found</code></strong>
 
 ```json
 { "error": "Pin not found" }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Returns 404 for a pin lost when the API restarted
 
@@ -924,23 +927,20 @@ None
 
 Request: `GET /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d`
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>404 Not Found</code></th></tr>
-<tr>
-<td>
-
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 None
-
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>404 Not Found</code></strong>
 
 ```json
 { "error": "Pin not found" }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Hides unexpected errors behind a generic 500
 
@@ -949,23 +949,20 @@ None
 
 Request: `GET /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d`
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>500 Internal Server Error</code></th></tr>
-<tr>
-<td>
-
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 None
-
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>500 Internal Server Error</code></strong>
 
 ```json
 { "error": "Something went wrong" }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ## Any other method or path
 
@@ -975,45 +972,39 @@ None
 
 Request: `DELETE /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d`
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>404 Not Found</code></th></tr>
-<tr>
-<td>
-
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 None
-
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>404 Not Found</code></strong>
 
 ```json
 { "error": "Not found" }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ### Returns 404 for a path with no route
 
 Request: `GET /pinz`
 
-<table class="req-res">
-<tr><th>Request body</th><th>Response body — <code>404 Not Found</code></th></tr>
-<tr>
-<td>
-
+<div class="req-res" style="display: flex; gap: 16px; width: 100%;">
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Request body</strong>
 None
-
-</td>
-<td>
+</div>
+<div style="flex: 1 1 0; min-width: 0;">
+<strong>Response body — <code>404 Not Found</code></strong>
 
 ```json
 { "error": "Not found" }
 ```
 
-</td>
-</tr>
-</table>
+</div>
+</div>
 
 ## Every response
 
