@@ -57,7 +57,7 @@ By the end, the API stores pins in a real database.
    - Done when: calling the health endpoint returns OK.
 2. **Create and read pins (no database yet)**
    - What it does: the API can add a pin, list all pins and return one pin.
-   - How: keep pins in a list in memory; add endpoints to create, list and get one; check new pins with zod (type is required, description isn't empty or too long, location is in Australia).
+   - How: keep pins in a list in memory; add endpoints to create, list and get one; check new pins with zod (type is required, description isn't empty or too long, location has a lat and lng).
    - Naming: one path per resource, and the HTTP method says what to do. `POST /pins` adds a pin, `GET /pins` lists them, `GET /pins/:id` gets one. Avoid `/pin` or `/pins/all`: `/pins/all` would clash with `/pins/:id`, because Express would read "all" as a pin id.
    - You'll learn: REST endpoints, status codes (200, 201, 400, 404), checking input.
    - Done when: a bad pin gets a 400 with a clear message, and a missing pin gets a 404.
@@ -66,6 +66,8 @@ By the end, the API stores pins in a real database.
    - How: install the Supabase CLI and start Supabase on your machine; set up Drizzle; create a pins table (location, type, description, created date); write a seed script with sample Brisbane pins; switch the endpoints from the in-memory list to the database.
    - You'll learn: tables, migrations, seed data, environment variables.
    - Done when: you restart the API and the pins are still there.
+
+Full endpoint list, error codes, models and every Postman example for step 2: [plans/phase-1-step-2-create-and-read-pins.md](plans/phase-1-step-2-create-and-read-pins.md).
 
 **Try it in Postman (Phase 1)**
 
@@ -99,18 +101,17 @@ Content-Type: application/json
 ```
 
 ```http
-# Step 2 — Bad pin (empty description, location outside Australia)
+# Step 2 — Bad pin (empty description)
 POST /pins
 Content-Type: application/json
 
-{ "type": "drainage", "description": "", "coords": { "lat": 51.5, "lng": -0.12 } }
+{ "type": "drainage", "description": "", "coords": { "lat": -27.5098, "lng": 153.0331 } }
 
 → 400 Bad Request
 {
   "error": "Invalid pin",
   "details": [
-    { "field": "description", "message": "Description is required" },
-    { "field": "coords.lat", "message": "Location must be in Australia" }
+    { "field": "description", "message": "Description is required" }
   ]
 }
 ```
@@ -888,7 +889,6 @@ Handle these in v1. Each one is in the step where it comes up.
 | Edge case                                                      | What the API does                                            | Step   |
 | -------------------------------------------------------------- | ------------------------------------------------------------ | ------ |
 | Bad input (missing type, empty description, 10,000 characters) | Returns 400 with a clear message                             | 2      |
-| Pin outside Australia or in the ocean                          | Rejects it                                                   | 2      |
 | Pin id that doesn't exist                                      | Returns 404                                                  | 5      |
 | Suburb lookup fails when a pin is made (LocationIQ down)       | Saves the pin without a suburb; a script fills it in later   | 7      |
 | Postcode isn't 4 digits, or area and suburb sent together      | Returns 400                                                  | 7      |
