@@ -2,10 +2,11 @@
 .env*
 
 # production
-/build
+*/build
+*/dist
 
 # dependencies
-/node_modules
+*/node_modules
 /.pnp
 .pnp.*
 .yarn/*

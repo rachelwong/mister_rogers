@@ -85,8 +85,7 @@ Content-Type: application/json
 {
   "type": "drainage",
   "description": "Kerb near the drain fills fast in heavy rain",
-  "lat": -27.5098,
-  "lng": 153.0331
+  "coords": { "lat": -27.5098, "lng": 153.0331 }
 }
 
 → 201 Created
@@ -94,8 +93,7 @@ Content-Type: application/json
   "id": "8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d",
   "type": "drainage",
   "description": "Kerb near the drain fills fast in heavy rain",
-  "lat": -27.5098,
-  "lng": 153.0331,
+  "coords": { "lat": -27.5098, "lng": 153.0331 },
   "createdAt": "2026-10-24T09:30:00.000Z"
 }
 ```
@@ -105,14 +103,14 @@ Content-Type: application/json
 POST /pins
 Content-Type: application/json
 
-{ "type": "drainage", "description": "", "lat": 51.5, "lng": -0.12 }
+{ "type": "drainage", "description": "", "coords": { "lat": 51.5, "lng": -0.12 } }
 
 → 400 Bad Request
 {
   "error": "Invalid pin",
   "details": [
     { "field": "description", "message": "Description is required" },
-    { "field": "lat", "message": "Location must be in Australia" }
+    { "field": "coords.lat", "message": "Location must be in Australia" }
   ]
 }
 ```
@@ -162,8 +160,8 @@ Origin: http://localhost:5173
 → 200 OK
 Access-Control-Allow-Origin: http://localhost:5173
 [
-  { "id": "8f1c2a90-...", "type": "drainage", "lat": -27.5098, "lng": 153.0331 },
-  { "id": "2b7d4e11-...", "type": "flooding", "lat": -27.5121, "lng": 153.0298 }
+  { "id": "8f1c2a90-...", "type": "drainage", "coords": { "lat": -27.5098, "lng": 153.0331 } },
+  { "id": "2b7d4e11-...", "type": "flooding", "coords": { "lat": -27.5121, "lng": 153.0298 } }
 ]
 ```
 
@@ -176,8 +174,7 @@ GET /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d
   "id": "8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d",
   "type": "drainage",
   "description": "Kerb near the drain fills fast in heavy rain",
-  "lat": -27.5098,
-  "lng": 153.0331,
+  "coords": { "lat": -27.5098, "lng": 153.0331 },
   "createdAt": "2026-10-21T09:30:00.000Z",
   "votes": 14,
   "replyCount": 2,
@@ -191,7 +188,7 @@ GET /pins?north=-27.49&south=-27.53&east=153.05&west=153.01&type=drainage
 
 → 200 OK
 [
-  { "id": "8f1c2a90-...", "type": "drainage", "lat": -27.5098, "lng": 153.0331 }
+  { "id": "8f1c2a90-...", "type": "drainage", "coords": { "lat": -27.5098, "lng": 153.0331 } }
 ]
 ```
 
@@ -201,8 +198,8 @@ GET /pins?suburb=annerley
 
 → 200 OK
 [
-  { "id": "8f1c2a90-...", "type": "drainage", "lat": -27.5098, "lng": 153.0331 },
-  { "id": "2b7d4e11-...", "type": "flooding", "lat": -27.5121, "lng": 153.0298 }
+  { "id": "8f1c2a90-...", "type": "drainage", "coords": { "lat": -27.5098, "lng": 153.0331 } },
+  { "id": "2b7d4e11-...", "type": "flooding", "coords": { "lat": -27.5121, "lng": 153.0298 } }
 ]
 
 # Pins in a postcode, flooding only
@@ -210,7 +207,7 @@ GET /pins?postcode=4103&type=flooding
 
 → 200 OK
 [
-  { "id": "2b7d4e11-...", "type": "flooding", "lat": -27.5121, "lng": 153.0298 }
+  { "id": "2b7d4e11-...", "type": "flooding", "coords": { "lat": -27.5121, "lng": 153.0298 } }
 ]
 
 # Postcode that isn't 4 digits
@@ -241,10 +238,12 @@ By the end, reading stays public, but only signed-in users can post.
    - You'll learn: tokens in request headers, middleware, 401 (not signed in).
    - Done when: "who am I" returns your user with a token and a 401 without one.
 10. **Profiles**
-   - What it does: each user has a profile with a display name (public) and a real name (private).
-   - How: create a profiles table linked to the Supabase user id; add an endpoint to create the profile straight after sign-up; reject display names that look like an address.
-   - You'll learn: linking your own table to users stored somewhere else; making sure each user has only one profile.
-   - Done when: creating a second profile for the same user is refused.
+
+- What it does: each user has a profile with a display name (public) and a real name (private).
+- How: create a profiles table linked to the Supabase user id; add an endpoint to create the profile straight after sign-up; reject display names that look like an address.
+- You'll learn: linking your own table to users stored somewhere else; making sure each user has only one profile.
+- Done when: creating a second profile for the same user is refused.
+
 11. **Only signed-in users can post**
     - What it does: creating a pin needs a valid token, and each pin records who posted it.
     - How: put the token check on the "create pin" endpoint; add the poster's user id to the pins table.
@@ -310,7 +309,7 @@ Content-Type: application/json
 POST /pins
 Content-Type: application/json
 
-{ "type": "drainage", "description": "...", "lat": -27.5098, "lng": 153.0331 }
+{ "type": "drainage", "description": "...", "coords": { "lat": -27.5098, "lng": 153.0331 } }
 
 → 401 Unauthorized
 { "error": "Not signed in" }
@@ -395,7 +394,7 @@ POST /pins
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{ "type": "flooding", "description": "Underpass ankle deep on Sunday", "lat": -27.6012, "lng": 153.1020 }
+{ "type": "flooding", "description": "Underpass ankle deep on Sunday", "coords": { "lat": -27.6012, "lng": 153.1020 } }
 
 → 201 Created
 { "id": "c3d4e5f6-...", "status": "pending", "isLocal": false }
@@ -429,7 +428,7 @@ By the end, the API supports replies, votes, saved pins and deleting your own pi
     - Done when: each list returns the right pins for the signed-in user only.
 18. **Delete your own pin**
     - What it does: users can delete pins they posted.
-    - How: mark the pin as deleted instead of removing it; check the user deleting is the poster; saved copies come back marked "removed".
+    - How: mark the pin as deleted instead of removing it; check the user deleting is the poster; saved copies come back with status "inactive".
     - You'll learn: soft delete; 401 (not signed in) vs 403 (not allowed).
     - Done when: deleting someone else's pin returns 403.
 
@@ -500,8 +499,8 @@ Authorization: Bearer {{token}}
 
 → 200 OK
 [
-  { "id": "8f1c2a90-...", "type": "drainage", "description": "Kerb near the drain...", "lat": -27.5098, "lng": 153.0331, "status": "live" },
-  { "id": "c3d4e5f6-...", "type": "flooding", "description": "Underpass ankle deep...", "lat": -27.6012, "lng": 153.1020, "status": "pending" }
+  { "id": "8f1c2a90-...", "type": "drainage", "description": "Kerb near the drain...", "coords": { "lat": -27.5098, "lng": 153.0331 }, "status": "live" },
+  { "id": "c3d4e5f6-...", "type": "flooding", "description": "Underpass ankle deep...", "coords": { "lat": -27.6012, "lng": 153.1020 }, "status": "pending" }
 ]
 ```
 
@@ -512,8 +511,8 @@ Authorization: Bearer {{token}}
 
 → 200 OK
 [
-  { "id": "2b7d4e11-...", "type": "flooding", "lat": -27.5121, "lng": 153.0298, "removed": false },
-  { "id": "9e8f7a6b-...", "type": "drainage", "lat": null, "lng": null, "removed": true }
+  { "id": "2b7d4e11-...", "type": "flooding", "coords": { "lat": -27.5121, "lng": 153.0298 }, "status": "active" },
+  { "id": "9e8f7a6b-...", "type": "drainage", "coords": null, "status": "inactive" }
 ]
 ```
 
@@ -567,7 +566,7 @@ POST /pins
 Authorization: Bearer {{pendingUserToken}}
 Content-Type: application/json
 
-{ "type": "drainage", "description": "...", "lat": -27.5098, "lng": 153.0331 }
+{ "type": "drainage", "description": "...", "coords": { "lat": -27.5098, "lng": 153.0331 } }
 
 → 403 Forbidden
 { "error": "Your account is waiting for approval" }
@@ -665,7 +664,7 @@ By the end, the API runs online and stays running.
 GET https://mister-rogers-api.onrender.com/pins
 
 → 200 OK
-[ { "id": "...", "type": "drainage", "lat": -27.5098, "lng": 153.0331 } ]
+[ { "id": "...", "type": "drainage", "coords": { "lat": -27.5098, "lng": 153.0331 } } ]
 ```
 
 ```http
@@ -692,6 +691,187 @@ GET /health/db
 ### After v1
 
 Pick one at a time: photos, forgot password, flood overlay, watch-a-pin emails, changing address.
+
+## TypeScript models
+
+The shapes the API sends and receives, matching the example requests above. Put them in one file, like `api/src/models.ts`, and add each one in the step that first needs it. Field names are suggestions; keep them in step with the Postman examples.
+
+**Tips**
+
+- A model describes what goes over the wire, not the database table. The table can have more columns (like a home address) than any response.
+- Once zod is in (step 2), write the schema first and get the type from it with `z.infer`, so the check and the type can't drift apart.
+- Dates are ISO strings (`"2026-10-24T09:30:00.000Z"`), because JSON has no date type.
+
+### Shared values
+
+```ts
+// Add more types as you go, like "magpies" or "toilets"
+export const PIN_TYPES = [
+  "drainage",
+  "flooding",
+  "wildlife",
+  "amenity",
+  "children",
+  "parking",
+  "traffic",
+  "recreation",
+  "disability",
+  "signage",
+  "none",
+] as const;
+export type PinType = (typeof PIN_TYPES)[number];
+
+export type PinStatus = "pending" | "live" | "rejected"; // step 13, 20
+export type YearsAtAddress = "under-3" | "3-10" | "more-than-10"; // step 12
+export type Role = "member" | "moderator" | "admin"; // step 19
+export type AccountStatus = "pending" | "active" | "flagged"; // step 19
+export type SavedPinStatus = "active" | "inactive"; // inactive = poster deleted it, step 18
+```
+
+### Pins
+
+```ts
+export type Coords = {
+  lat: number;
+  lng: number;
+} | null;
+
+// What a user sends to create a pin (step 2)
+export interface NewPin {
+  type: PinType;
+  description: string; // 1–500 characters
+  coords: Coords;
+}
+
+// One pin on the map: only what the map needs (step 4)
+export interface PinMapItem {
+  id: string;
+  type: PinType;
+  coords: Coords;
+}
+
+// One pin's full details (step 5)
+export interface PinDetail extends PinMapItem {
+  description: string;
+  createdAt: string;
+  votes: number; // step 15
+  replyCount: number; // step 14
+  author: PublicAuthor; // step 11
+  label?: string; // "From someone who doesn't live nearby", step 20
+}
+
+// Response after creating a pin (step 13)
+export interface CreatePinResponse {
+  id: string;
+  status: PinStatus;
+  isLocal: boolean;
+}
+
+// "My pins" includes pending ones (step 17)
+export interface MyPin extends PinMapItem {
+  description: string;
+  status: PinStatus;
+}
+
+// "My saved pins": a deleted pin comes back inactive, with no location (step 17, 18)
+export interface SavedPin {
+  id: string;
+  type: PinType;
+  coords: Coords; // null when inactive
+  status: SavedPinStatus;
+}
+```
+
+### Users
+
+```ts
+// The signed-in user, from the token (step 9)
+export interface Me {
+  id: string;
+  email: string;
+}
+
+// What a user sends to create a profile (step 10)
+export interface NewProfile {
+  displayName: string;
+  realName: string;
+}
+
+// The only user details anyone else ever sees (step 10, 12)
+export interface PublicProfile {
+  displayName: string;
+  livesNearby: boolean;
+  yearsAtAddress?: YearsAtAddress;
+}
+
+// The full profile. Stays inside the API: never send it in a response (step 12, 19)
+export interface Profile {
+  userId: string; // Supabase user id
+  displayName: string;
+  realName: string;
+  address: {
+    text: string; // "12 Example Street, Annerley QLD 4103" (LocationIQ's label)
+    coords: Coords;
+  } | null;
+  yearsAtAddress: YearsAtAddress | null;
+  role: Role;
+  status: AccountStatus;
+}
+```
+
+`Profile` is the one model with private fields. The step 12 test should check that no response contains `realName`, `address`, or the address's `lat` and `lng`.
+
+### Replies (comments)
+
+The API calls comments "replies", to match `/pins/:id/replies`.
+
+```ts
+// What a user sends to add a reply (step 14)
+// No pinId: it comes from the URL (POST /pins/:id/replies → req.params.id)
+export interface NewReply {
+  text: string;
+}
+
+// One reply on a pin (step 14)
+export interface Reply {
+  id: string;
+  text: string;
+  createdAt: string;
+  author: PublicAuthor;
+  flagged?: boolean; // only shown to moderators, step 21
+}
+```
+
+### Errors
+
+Every error response has the same shape, so the web app can read any of them the same way.
+
+```ts
+// One problem with one field, from zod (step 2)
+export interface FieldError {
+  field: string;
+  message: string;
+}
+
+// Every 4xx and 5xx response body
+export interface ApiError {
+  error: string; // a message a person can read, like "Pin not found"
+  details?: FieldError[]; // only on 400s from bad input
+}
+```
+
+| Status | When                               | Example `error`                             |
+| ------ | ---------------------------------- | ------------------------------------------- |
+| 400    | Bad input                          | "Invalid pin" (with `details`)              |
+| 401    | No token, or a bad one             | "Not signed in"                             |
+| 403    | Signed in but not allowed          | "You can only delete your own pins"         |
+| 404    | Doesn't exist                      | "Pin not found"                             |
+| 409    | Already exists                     | "Profile already exists"                    |
+| 429    | Too many requests                  | "Too many requests. Try again in a minute." |
+| 500    | Something broke in the API         | "Something went wrong"                      |
+| 503    | LocationIQ is down or at its limit | "Address search is busy. Try again or ..."  |
+
+Send every error through one Express error handler, so no endpoint builds its own error body and a 500 never leaks a stack trace. The one exception is `/health/db` (step 24), which keeps its own `{ status, database }` shape for the scheduled job.
 
 ## Questions for Rachel
 
@@ -721,7 +901,7 @@ Handle these in v1. Each one is in the step where it comes up.
 | Address or real name leaks in a response                       | Only public profile fields leave the API; one test checks it | 12     |
 | Poster doesn't live nearby                                     | Saves the pin as pending; labels it once approved            | 13, 20 |
 | Voting twice                                                   | One vote per user per pin                                    | 15     |
-| Deleting a pin that has replies and saves                      | Soft delete; saved copies come back marked "removed"         | 18     |
+| Deleting a pin that has replies and saves                      | Soft delete; saved copies come back with status "inactive"   | 18     |
 | Deleting someone else's pin                                    | Returns 403                                                  | 18     |
 | Member calls an admin endpoint                                 | Returns 403                                                  | 19     |
 | Supabase project pauses after a quiet week                     | Scheduled ping every 3 days                                  | 24     |
