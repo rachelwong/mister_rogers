@@ -1,13 +1,26 @@
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
-
+.env.local
+.env.local.errors
 
 # build output
 dist/
 build/
 *.tsbuildinfo
 
+# AI
+.claude
+skills-lock.json
+.mcp.json
+
+# database
+**/supabase/.temp/
+**/supabase/.branches/
+
+# Supabase Edge Functions local secrets (NEVER commit these)
+**/supabase/functions/.env
+**/supabase/functions/.env.local
 
 # dependencies
 node_modules/

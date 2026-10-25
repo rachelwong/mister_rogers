@@ -10,7 +10,7 @@ Mr Rogers is a learning project for backend. The backend plan is 24 small steps,
 **The simple approach**
 
 - **One frontend, one API, one Supabase project.** React + TypeScript web app, Node + Express API, Supabase for the Postgres database and sign-in.
-- **Build locally first.** The Supabase CLI runs Postgres and Auth in Docker on your machine. Deploy near the end.
+- **Run the API locally, use a hosted database.** The API runs on your machine and connects to a free hosted Supabase project for development, so there's no Docker to install. A second Supabase project is created for the live site when you deploy near the end.
 - **No map maths in the database.** Store latitude and longitude as plain numbers. Work out distance with a small function in Node.
 - **Supabase Auth for sign-in.** Email + password. Supabase stores passwords and handles sessions; your API only checks the user's token.
 - **"Local" is a yes/no.** A pin is either "from someone nearby" or "from someone who doesn't live nearby". No distance in metres, so no way to work out where someone lives.
@@ -63,11 +63,13 @@ By the end, the API stores pins in a real database.
    - Done when: a bad pin gets a 400 with a clear message, and a missing pin gets a 404.
 3. **Store pins in a database**
    - What it does: pins are still there after the API restarts.
-   - How: install the Supabase CLI and start Supabase on your machine; set up Drizzle; create a pins table (location, type, description, created date); write a seed script with sample Brisbane pins; switch the endpoints from the in-memory list to the database.
+   - How: connect the API to your development Supabase project; set up Drizzle; create a pins table (location, type, description, created date); write a seed script with sample Brisbane pins; switch the endpoints from the in-memory list to the database.
    - You'll learn: tables, migrations, seed data, environment variables.
    - Done when: you restart the API and the pins are still there.
 
 Full endpoint list, error codes, models and every Postman example for step 2: [plans/phase-1-step-2-create-and-read-pins.md](plans/phase-1-step-2-create-and-read-pins.md).
+
+What to build and every Postman case for step 3: [plans/phase-1-step-3-store-pins-in-a-database.md](plans/phase-1-step-3-store-pins-in-a-database.md).
 
 **Try it in Postman (Phase 1)**
 
@@ -230,7 +232,7 @@ By the end, reading stays public, but only signed-in users can post.
 
 8. **Set up Supabase Auth**
    - What it does: users can be created and signed in with email and password (the web app does the sign-in screens).
-   - How: turn on email sign-in in your local Supabase; create a test user; sign the test user in through Supabase's REST endpoint to get an access token for testing.
+   - How: turn on email sign-in in your development Supabase project, and turn off "Confirm email" so test users don't need real emails (the built-in email sender only allows a few emails an hour); create a test user; sign the test user in through Supabase's REST endpoint to get an access token for testing.
    - You'll learn: what an auth provider does for you, and what an access token (JWT) is.
    - Done when: you have an access token for a test user.
 9. **Check the token**
@@ -254,9 +256,9 @@ By the end, reading stays public, but only signed-in users can post.
 **Try it in Postman (Phase 3)**
 
 ```http
-# Step 8 — Get a test token from local Supabase (not your API)
-POST http://127.0.0.1:54321/auth/v1/token?grant_type=password
-apikey: <your local anon key>
+# Step 8 — Get a test token from your development Supabase project (not your API)
+POST https://your-project-ref.supabase.co/auth/v1/token?grant_type=password
+apikey: <your project's anon key>
 Content-Type: application/json
 
 { "email": "test@example.com", "password": "a-long-test-password" }
@@ -643,14 +645,16 @@ By the end, the API runs online and stays running.
 
 22. **Put the API online**
     - What it does: the API works on a real web address with a real database.
-    - How: create the hosted Supabase project (free plan) and run your migrations on it; deploy the API to Render's free plan and connect your GitHub repo so it redeploys whenever you merge; set environment variables; allow the live web app's address in CORS.
+    - How: create a second hosted Supabase project (free plan) for the live site, separate from your development one, turn on "Enforce SSL" for it (so the database refuses unencrypted connections from the internet), connect with its CA certificate so the API checks it's talking to the real database, and run your migrations on it; deploy the API to Render's free plan and connect your GitHub repo so it redeploys whenever you merge; set environment variables; allow the live web app's address in CORS.
     - You'll learn: how running locally and running live are different.
     - Done when: the live API returns pins from the hosted database, and merging a PR redeploys it.
     - Watch out: Render's free plan sleeps after 15 quiet minutes, so the next request takes about a minute.
 23. **Basic protection**
-    - What it does: the API is harder to attack or spam.
-    - How: add helmet for security headers; add a rate limit on every endpoint that creates or changes data, and on address search.
-    - Done when: 30 fast posts in a row get blocked.
+    - What it does: the API is harder to attack or spam, and the live database only accepts connections from where the API runs.
+    - How: add helmet for security headers; add a rate limit on every endpoint that creates or changes data, and on address search; in the live Supabase project, turn on Network Restrictions (Project Settings → Database) and allow only Render's outbound IP ranges for your region (listed in the Render dashboard).
+    - Why the IP allowlist: the database can only filter by IP address, not by domain. With the allowlist, someone who gets hold of the connection string still can't connect from anywhere else. Other Render customers share those IP ranges, so it's an extra layer on top of the strong password and SSL, not a replacement for them.
+    - Done when: 30 fast posts in a row get blocked, the live API still returns pins, and connecting to the live database from your own machine is refused.
+    - Watch out: the allowlist only covers Postgres connections. Supabase Auth and its REST Data API stay open to the internet, so row level security still matters. To run migrations on the live database from your machine, add your current IP address for the run and remove it afterwards.
 24. **Keep Supabase awake**
     - What it does: stops the free Supabase project pausing after a quiet week.
     - How: add a health endpoint that runs a tiny database query; add a GitHub Actions scheduled job that calls it every 3 days.
@@ -917,7 +921,7 @@ Everything here is free for a hobby project.
 | Job                | Pick                                      | Why this one                                                                                                                                                     |
 | ------------------ | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | API                | Node + Express + TypeScript               | Most tutorials and answers use it                                                                                                                                |
-| Database + sign-in | Supabase free plan (Supabase CLI locally) | Postgres plus ready-made sign-up, sign-in and password storage in one service                                                                                    |
+| Database + sign-in | Supabase free plan (dev + live projects)  | Postgres plus ready-made sign-up, sign-in and password storage in one service                                                                                    |
 | Database code      | Drizzle                                   | Close to plain SQL, you already know it                                                                                                                          |
 | Validation         | zod                                       | Same schemas can be shared with the web app                                                                                                                      |
 | Address search     | LocationIQ (free plan)                    | Autocomplete and lookup in one service. 5,000 requests a day, 2 a second. The web app must show a "Search by LocationIQ.com" link. Backup: Photon (free, no key) |

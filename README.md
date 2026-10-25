@@ -67,6 +67,7 @@ Mobile screens, 390 × 844. Source files are in [docs/wireframes/source](docs/wi
 ## Backend
 
 - using typescript version 6.0 for compatibilty with eslint
+- use `npx supabase`
 
 ### To run
 
