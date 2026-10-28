@@ -5,6 +5,7 @@ A map of local know-how from people who actually live nearby. It covers things l
 This is a learning project for backend development, where Claude Code provides technical guidance and human developer delivers implementation.
 
 - **Build plan:** [docs/build-plan.md](docs/build-plan.md) - backend only
+- **Database connection settings:** [docs/database-connection.md](docs/database-connection.md)
 - **Live wireframes:** https://claude.ai/artifact/25cHnCbxeDnWPRAzUySKyN
 - **Claude exploration:** [https://claude.ai/artifact/N6ZVFGSE9W8BSSdEmsnnq8#a35f654e-cd87.mwbr49g9p46.53195](https://claude.ai/artifact/N6ZVFGSE9W8BSSdEmsnnq8#a35f654e-cd87.mwbr49g9p46.53195)
 - **Notion idea doc:** [https://app.notion.com/p/rachelwong/Mr-Rogers-3fb375d34b3480bb9f4cecab0ecb8576?source=copy_link](https://app.notion.com/p/rachelwong/Mr-Rogers-3fb375d34b3480bb9f4cecab0ecb8576?source=copy_link)
@@ -30,7 +31,7 @@ This project is that retired person with a notebook, wearing a red jumper.
 | ------- | ------------------------------- |
 | `web/`  | React + TypeScript web app      |
 | `api/`  | Node + Express + TypeScript API |
-| `docs/` | Build plan and wireframes       |
+| `docs/` | Build plan, wireframes, notes   |
 
 ## Wireframes
 

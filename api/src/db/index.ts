@@ -9,7 +9,8 @@ export const queryClient = postgres(config.database.url, {
     // Apply SSL certificate
     ca: config.database.ca,
   },
-  idle_timeout: 20, // Close idle connections quickly
+  max: 5,
+  idle_timeout: 300, // Keep idle connections for 5 minutes, so requests skip the slow reconnect (in seconds)
   connect_timeout: 5, // Fail fast if a connection can't be made (in seconds)
 });
 

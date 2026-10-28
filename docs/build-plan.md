@@ -61,7 +61,8 @@ By the end, the API stores pins in a real database.
    - Naming: one path per resource, and the HTTP method says what to do. `POST /pins` adds a pin, `GET /pins` lists them, `GET /pins/:id` gets one. Avoid `/pin` or `/pins/all`: `/pins/all` would clash with `/pins/:id`, because Express would read "all" as a pin id.
    - You'll learn: REST endpoints, status codes (200, 201, 400, 404), checking input.
    - Done when: a bad pin gets a 400 with a clear message, and a missing pin gets a 404.
-3. **Store pins in a database**
+3. **Store pins in a database** 🟡 Provisionally done 28/10/2026
+   - Verified: migrations rebuild the table, the seed works, and `POST /pins`, `GET /pins` and `GET /pins/:id` work against the database; an id that isn't a UUID, or a UUID no pin has, returns 404. Still to check: the rest of the [build checklist](plans/phase-1-step-3-store-pins-in-a-database.md#build-checklist), especially the API restart cases.
    - What it does: pins are still there after the API restarts.
    - How: connect the API to your development Supabase project; set up Drizzle; create a pins table (location, type, description, created date); write a seed script with sample Brisbane pins; switch the endpoints from the in-memory list to the database.
    - You'll learn: tables, migrations, seed data, environment variables.
