@@ -1,9 +1,16 @@
+import cors from 'cors';
 import express, { type Express, type Request, type Response } from 'express';
+import helmet from 'helmet';
 import { errorHandler } from './middleware/errorHandler.ts';
 import { pinsRouter } from './routes/pins.ts';
+import type { Config } from './types/config.ts';
 
-const createApp = (): Express => {
+const createApp = (config: Config): Express => {
   const app = express();
+  app.use(helmet());
+
+  app.use(cors({ origin: config.corsOrigins }));
+
   app.use(express.json()); // Parses application/json
 
   app.get('/health', (_: Request, res: Response) => {

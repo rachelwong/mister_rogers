@@ -1,8 +1,10 @@
 import http from 'node:http';
 import createApp from './app.ts';
-import { config } from './config.ts';
+import { loadConfig } from './config.ts';
 
-const app = createApp();
+const config = loadConfig();
+
+const app = createApp(config);
 
 const httpServer = http.createServer(app);
 

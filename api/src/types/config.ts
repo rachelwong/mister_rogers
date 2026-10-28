@@ -1,6 +1,6 @@
 export interface Config {
   port: number;
-  corsOrigins: string;
+  corsOrigins: string[];
   nodeEnv: string;
   database: {
     url: string;

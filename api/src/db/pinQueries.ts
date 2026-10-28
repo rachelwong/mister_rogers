@@ -1,7 +1,7 @@
 import { asc, eq } from 'drizzle-orm';
 import type { CreatePinRequest } from '../schemas/pinSchema.ts';
 import type { Pin } from '../types/pin.ts';
-import { transformPin } from '../utils/transformDatabase.ts';
+import { transformPinData } from '../utils/transformDatabase.ts';
 import { db } from './index.ts';
 import { pins } from './schema.ts';
 
@@ -9,7 +9,7 @@ export async function getAllPins(): Promise<Pin[]> {
   try {
     const response = await db.select().from(pins).orderBy(asc(pins.createdAt));
 
-    return response.map((pin) => transformPin(pin));
+    return response.map((pin) => transformPinData(pin));
   } catch (err) {
     throw new Error(`Error getting all pins`, { cause: err });
   }
@@ -27,7 +27,7 @@ export async function getPin(id: string): Promise<Pin | null> {
       return null;
     }
 
-    return transformPin(singlePin[0]!);
+    return transformPinData(singlePin[0]!);
   } catch (err) {
     throw new Error(`Error getting pin`, { cause: err });
   }
@@ -51,7 +51,7 @@ export async function createPin(
       return null;
     }
 
-    const transformedPin = transformPin({
+    const transformedPin = transformPinData({
       ...response[0],
     });
 

@@ -66,6 +66,7 @@ async function main() {
         createdAt: new Date('2026-10-06T08:00:00.000Z'),
       },
     ])
+    .returning()
     .onConflictDoNothing({ target: pins.id });
 
   console.log(`✅ Seeding complete! ${inserted.length} sample pins`);

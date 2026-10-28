@@ -7,12 +7,15 @@ import {
   GetPinSchema,
   type CreatePinRequest,
 } from '../schemas/pinSchema.ts';
+import { transformMapPin } from '../utils/transformDatabase.ts';
 
 export const pinsRouter: Router = Router();
 
 pinsRouter.get('/', async (_, res: Response) => {
   const response = await getAllPins();
-  return res.status(200).json(response);
+  const mapPins = response.map(transformMapPin);
+
+  return res.status(200).json(mapPins);
 });
 
 pinsRouter.get('/:id', async (req, res: Response) => {

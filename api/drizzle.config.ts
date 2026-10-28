@@ -1,9 +1,10 @@
 /// <reference types="node" />
 import 'dotenv/config';
 import { defineConfig } from 'drizzle-kit';
-import { config } from './src/config.ts';
+import { loadDatabaseConfig } from './src/config.ts';
 
-const url = new URL(config.database.url);
+const database = loadDatabaseConfig();
+const url = new URL(database.url);
 
 export default defineConfig({
   out: './src/drizzle/migrations',
@@ -17,7 +18,7 @@ export default defineConfig({
     database: url.pathname.slice(1),
     ssl: {
       rejectUnauthorized: true,
-      ca: config.database.ca,
+      ca: database.ca,
     },
   },
 });

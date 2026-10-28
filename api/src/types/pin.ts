@@ -2,12 +2,15 @@ import type { PIN_TYPE } from '../utils/constants.ts';
 
 export type Coords = { lat: number; lng: number } | null;
 
-export interface Pin {
+export type Pin = MapPin & {
+  description: string;
+  createdAt: string; // utc string date
+};
+
+export interface MapPin {
   id: string; // uuid
   type: PinType;
-  description: string;
   coords: Coords;
-  createdAt: string; // utc string date
 }
 
 export type PinType = (typeof PIN_TYPE)[keyof typeof PIN_TYPE];
