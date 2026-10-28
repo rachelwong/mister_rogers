@@ -37,8 +37,8 @@ Endpoints
 | Method    | Path        | Does                          | What changes in this step                                                |
 | --------- | ----------- | ----------------------------- | ------------------------------------------------------------------------ |
 | `GET`     | `/pins`     | Lists all pins for the map    | Each pin has only `id`, `type` and `coords`; still oldest first          |
-| `GET`     | `/pins/:id` | Returns one pin               | Nothing in the body (step 5 adds votes, replies and the poster)          |
-| `POST`    | `/pins`     | Adds a pin                    | Nothing in the body (step 13 changes what comes back)                    |
+| `GET`     | `/pins/:id` | Returns one pin               | Nothing in the body (steps 9, 12 and 13 add the poster, replies, votes)  |
+| `POST`    | `/pins`     | Adds a pin                    | Nothing in the body (step 11 changes what comes back)                    |
 | `OPTIONS` | any path    | The browser's preflight check | New: answers `204` with the CORS permission headers                      |
 | any       | any path    | Everything                    | A request from an allowed address gets the CORS permission headers back |
 
@@ -52,7 +52,7 @@ What `GET /pins` returns
 - A list (can be `[]`), oldest pin first
 - Each item has exactly three fields: `id`, `type`, `coords { lat, lng }`
 - No `description` and no `createdAt`. The web app gets those from `GET /pins/:id` when someone opens a pin
-- Later steps change this list: step 6 filters by map area and type, step 7 by suburb or postcode, step 13 leaves out pending pins
+- Later steps change this list: step 5 filters by map area and type, step 6 by suburb or postcode, step 11 leaves out pending pins
 
 What CORS permission looks like
 
@@ -74,7 +74,7 @@ Configuration
 - Write each address exactly as the browser sends it in `Origin`: scheme, host and port, with no trailing slash
 - `http://localhost:5173` and `http://127.0.0.1:5173` are different addresses, so open the web app at the address in `CORS_ORIGIN`
 - The API won't start without at least one address in `CORS_ORIGIN`, and says why in the terminal. Missing, blank, or only spaces and commas all count as none
-- Step 22 sets `CORS_ORIGIN` on Render to the live web app's address. Each environment has its own list
+- Step 20 sets `CORS_ORIGIN` on Render to the live web app's address. Each environment has its own list
 
 How the browser uses CORS
 
@@ -97,7 +97,7 @@ sequenceDiagram
   Note over B: Browser blocks the page from reading it<br/>("blocked by CORS policy")
 ```
 
-- CORS only protects people using a browser. Postman, curl and other servers ignore it, so it is not a way to stop anyone calling the API (step 9 adds sign-in for that)
+- CORS only protects people using a browser. Postman, curl and other servers ignore it, so it is not a way to stop anyone calling the API (step 7 adds sign-in for that)
 
 ## Consider these approaches
 
@@ -120,7 +120,7 @@ CORS
 - Read `CORS_ORIGIN` with the same required-variable check as `DATABASE_URL`, so a missing value stops the API with the right message
 - Give the `cors` middleware the addresses as a list, even when there's only one, never a plain string. With a plain string, `cors` sends that address back on every response, even to other addresses and to requests with no `Origin`. With a list, it sends back the matching address only (not `*`), adds `Vary: Origin`, answers preflights with `204`, and sends nothing to any other address
 - Register `cors` before everything else in `app.ts`, including the JSON parser. Middleware registered after the JSON parser is skipped when the JSON is broken, so the `400` would go out without the header
-- Don't turn on credentials (cookies). Step 9 sends the sign-in token in an `Authorization` header, which needs adding to the allowed headers then, not cookies
+- Don't turn on credentials (cookies). Step 7 sends the sign-in token in an `Authorization` header, which needs adding to the allowed headers then, not cookies
 - Don't use `*` for the origin, even in development. It hides mistakes in the address list until you deploy
 
 ## Build checklist
@@ -136,7 +136,7 @@ These cases are the acceptance criteria and the definition of done for this step
 
 ## Every earlier case still passes
 
-- Re-run the [step 2](phase-1-step-2-create-and-read-pins.md#build-checklist) and [step 3](phase-1-step-3-store-pins-in-a-database.md#build-checklist) build checklists
+- Claude re-runs the [step 2](phase-1-step-2-create-and-read-pins.md#build-checklist) and [step 3](phase-1-step-3-store-pins-in-a-database.md#build-checklist) build checklists as a regression test during `/review-this`
 - Every `GET /pins` case in them now expects each item to have only `id`, `type` and `coords`, in the same order as before
 - Every other case must get exactly the same response as before
 

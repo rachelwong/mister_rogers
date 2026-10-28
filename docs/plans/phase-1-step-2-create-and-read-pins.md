@@ -553,7 +553,7 @@ Content-Type: application/json
 
 ### Rejects a pin with no location
 
-- `coords` can be `null` in a saved pin (step 18), but a new pin must have one
+- `coords` can be `null` in a saved pin (step 16), but a new pin must have one
 
 <div class="req-res" style="display: flex; gap: 16px; width: 100%;">
 <div style="flex: 1 1 0; min-width: 0;">
@@ -918,7 +918,7 @@ None
 
 ### Returns the pin with a matching id
 
-- Same shape as the create response; step 5 adds votes, replies and author
+- Same shape as the create response; steps 9, 12 and 13 add userDetails, replyCount and votes
 
 Request: `GET /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d`
 

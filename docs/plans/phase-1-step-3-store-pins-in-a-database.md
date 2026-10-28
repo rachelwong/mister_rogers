@@ -3,7 +3,7 @@
 Part of the [build plan](../build-plan.md#phase-1--the-api-can-save-and-return-pins).
 
 - Starting point: [step 2](phase-1-step-2-create-and-read-pins.md) is built. `POST /pins`, `GET /pins` and `GET /pins/:id` already work, with every field rule and error message, but they keep pins in an in-memory list that empties whenever the API restarts
-- This step connects the API to a Postgres database in your hosted Supabase project (the free-plan development project, not the one step 22 deploys to), then switches those three endpoints from the in-memory list to the database
+- This step connects the API to a Postgres database in your hosted Supabase project (the free-plan development project, not the one step 20 deploys to), then switches those three endpoints from the in-memory list to the database
 - Requests and responses stay the same. The only difference you'll see is that pins are still there after the API restarts
 
 ## What to build
@@ -34,7 +34,7 @@ Endpoints
 | `POST` | `/pins`     | Adds a pin      | Saves the pin to the database instead of the in-memory list                     |
 | `GET`  | `/pins`     | Lists all pins  | Reads from the database instead of the in-memory list, oldest pin first         |
 | `GET`  | `/pins/:id` | Returns one pin | Reads from the database; an id that isn't a UUID still returns `404`, not `500` |
-| `GET`  | `/health`   | Says "ok"       | Nothing (step 24 adds a database check)                                         |
+| `GET`  | `/health`   | Says "ok"       | Nothing (step 22 adds a database check)                                         |
 
 Error codes (new or changed in this step only; every step 2 error still applies)
 
@@ -53,7 +53,7 @@ What is stored
 
 - One `pins` table, with one row per pin
 - Each row holds: id (a UUID), type, description, latitude, longitude, created date
-- Nothing else yet: step 7 adds suburb and postcode, step 11 adds who posted it, step 13 adds status
+- Nothing else yet: step 6 adds suburb and postcode, step 9 adds who posted it, step 11 adds status
 - The table is created by a migration file kept in git, not by hand in a database tool
 - The responses are the same `Pin` shape as step 2: `id`, `type`, `description`, `coords { lat, lng }`, `createdAt`
 - `lat` and `lng` come back as numbers, exactly as they were sent (not as text, no extra decimals)
@@ -136,7 +136,7 @@ Hosted database
 - ✅ Connect with SSL and verify Supabase's certificate (`sslmode=verify-full`), not just `sslmode=require`
   - Download the CA certificate from the same dashboard page, keep it in `api/`, and pass its contents to postgres.js's `ssl` option as the CA to trust
   - Why: `require` encrypts the connection but, in most drivers, doesn't check who's on the other end, so something pretending to be your database could still read everything. Checking the certificate against Supabase's CA proves the API is talking to your project
-  - The CA certificate is public, not a secret, so it's fine to commit; step 22 then reuses it on Render
+  - The CA certificate is public, not a secret, so it's fine to commit; step 20 then reuses it on Render
   - Never turn off certificate checking to make a certificate error go away; that brings back the problem it solves
 - ✅ Give the database connection a short connection timeout (a few seconds), so requests fail with a `500` quickly when the database can't be reached instead of hanging
   - postgres.js waits 30 seconds by default; its `connect_timeout` option is in seconds
@@ -193,7 +193,7 @@ Deferred (28 Oct 2026): the "database unreachable" cases weren't run when step 3
 
 ## Every step 2 case still passes
 
-- Re-run every case in the [step 2 build checklist](phase-1-step-2-create-and-read-pins.md#build-checklist); each must get exactly the same response
+- Claude re-runs every case in the [step 2 build checklist](phase-1-step-2-create-and-read-pins.md#build-checklist) as a regression test during `/review-this`; each must get exactly the same response
 - One step 2 case changes: "Returns 404 for a pin lost when the API restarted" now returns `200` with the pin (see [Still returns a pin after the API restarts](#still-returns-a-pin-after-the-api-restarts))
 - For "Returns an empty list, not a 404, when there are no pins", start from a fresh database
 - For the "Hides unexpected errors behind a generic 500" cases, you can now also make the database unreachable instead of throwing an error (see the cases below)
