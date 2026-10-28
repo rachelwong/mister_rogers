@@ -133,7 +133,8 @@ Step 3 uses the same requests. The test: create a pin, restart the API, and it s
 
 By the end, anyone can fetch pins for the map without signing in.
 
-4. **Map data endpoint**
+4. **Map data endpoint** 🟡 Provisionally done 28/10/2026
+   - Verified in Postman: `GET /pins` returns only `id`, `type` and `coords` (including an empty list and a newly created pin); `POST /pins` and `GET /pins/:id` still return the full pin; `CORS_ORIGIN` is required; allowed addresses get `Access-Control-Allow-Origin` and `Vary: Origin` on every response, including created pins, 400s, 404s and 500s; other addresses get no permission. Still to check: the [real browser cases](plans/phase-2-step-4-map-data-endpoint.md#in-a-real-browser) (this step's "done when") and re-running the step 2 and 3 checklists.
    - What it does: the "list pins" endpoint returns only what a map needs, and a web app on a different address can call it.
    - How: return each pin's id, location and type as JSON; turn on CORS for the web app's address.
    - You'll learn: shaping a response for its user; CORS and why browsers block calls to other sites.
@@ -155,6 +156,8 @@ By the end, anyone can fetch pins for the map without signing in.
    - Done when: searching a suburb or postcode returns only pins in it; a postcode that isn't 4 digits, or mixing map edges with suburb or postcode, returns 400; a suburb with no pins returns an empty list.
 
 Task list and every Postman case for step 4: [plans/phase-2-step-4-map-data-endpoint.md](plans/phase-2-step-4-map-data-endpoint.md).
+
+Task list and every Postman case for step 5: [plans/phase-2-step-5-get-one-pin.md](plans/phase-2-step-5-get-one-pin.md). Votes, replies and posters don't exist yet, so step 5 returns `votes: 0`, `replyCount: 0` and `author: null`. Steps 11, 14 and 15 fill in the real values.
 
 **Try it in Postman (Phase 2)**
 
