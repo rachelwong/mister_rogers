@@ -154,6 +154,8 @@ By the end, anyone can fetch pins for the map without signing in.
    - You'll learn: calling another service from your server and keeping its key secret; saving worked-out data so reads stay simple.
    - Done when: searching a suburb or postcode returns only pins in it; a postcode that isn't 4 digits, or mixing map edges with suburb or postcode, returns 400; a suburb with no pins returns an empty list.
 
+Task list and every Postman case for step 4: [plans/phase-2-step-4-map-data-endpoint.md](plans/phase-2-step-4-map-data-endpoint.md).
+
 **Try it in Postman (Phase 2)**
 
 ```http

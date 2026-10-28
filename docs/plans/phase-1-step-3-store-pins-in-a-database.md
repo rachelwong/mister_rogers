@@ -184,6 +184,13 @@ These cases are the acceptance criteria and the definition of done for this step
 - "Database unreachable" means: the API can't reach Supabase while the API keeps running. Turn off your computer's Wi-Fi (or unplug the network) to get there, and turn it back on afterwards
   - Pausing the project in the dashboard also works, but pausing and restoring each take a few minutes
 
+Deferred (28 Oct 2026): the "database unreachable" cases weren't run when step 3 was signed off. They are still untested:
+
+- `POST /pins` → Returns a generic 500 when the database is down
+- `GET /pins` → Returns a generic 500 when the database is down
+- `GET /pins` → Recovers once the database is back, without restarting the API
+- `GET /pins/:id` → Returns a generic 500 when the database is down
+
 ## Every step 2 case still passes
 
 - Re-run every case in the [step 2 build checklist](phase-1-step-2-create-and-read-pins.md#build-checklist); each must get exactly the same response
