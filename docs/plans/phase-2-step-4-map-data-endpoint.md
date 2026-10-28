@@ -12,32 +12,34 @@ The build checklist below is the definition of done. The step is complete when e
 
 Task list
 
-| #   | Task                                                                                                              | Proved by these checklist cases                                                                                                                                                                                                                                 |
-| --- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Make `GET /pins` return only `id`, `type` and `coords` for each pin                                               | Every case under [`GET /pins`](#get-pins)                                                                                                                                                                                                                       |
-| 2   | Keep `GET /pins/:id` and `POST /pins` returning the full pin                                                      | Every case under [`GET /pins/:id`](#get-pinsid) and [`POST /pins`](#post-pins)                                                                                                                                                                                  |
-| 3   | Read the allowed web addresses from a `CORS_ORIGIN` environment variable, and refuse to start without it          | Every case under [Configuration](#configuration)                                                                                                                                                                                                                |
-| 4   | Add `CORS_ORIGIN` to `api/.env.example` with the local web app's address                                          | Check by eye: the file is in git and lists `CORS_ORIGIN=http://localhost:5173`. The file doesn't exist yet, so create it, with every variable the API needs and no real secrets                                                                                 |
-| 5   | Tell browsers that the listed addresses may read the API's responses, and give no permission to any other address | [Allows the web app's address](#allows-the-web-apps-address) to [Still works with no Origin header](#still-works-with-no-origin-header)                                                                                                                         |
-| 6   | Answer the browser's permission check (the preflight `OPTIONS` request) that comes before creating a pin          | [Answers the browser's preflight before creating a pin](#answers-the-browsers-preflight-before-creating-a-pin) and [Gives no permission in a preflight from an address that isn't listed](#gives-no-permission-in-a-preflight-from-an-address-that-isnt-listed) |
-| 7   | Send the permission on every response to a listed address, including created pins, `400`s, `404`s and `500`s      | [Allows the web app to read a created pin](#allows-the-web-app-to-read-a-created-pin) to [Allows the web app to read a 500](#allows-the-web-app-to-read-a-500)                                                                                                  |
-| 8   | Check it in a real browser                                                                                        | Every case under [In a real browser](#in-a-real-browser)                                                                                                                                                                                                        |
-| 9   | Make sure nothing else changed                                                                                    | [Every earlier case still passes](#every-earlier-case-still-passes)                                                                                                                                                                                             |
+- Status: ✅ passes, 🟡 partly checked, ❌ needs rework, ⬜ not done
+- Last reviewed 2026-10-28 (third pass): every case that doesn't create a pin or need an empty database was re-run and passes. The seed now runs without `CORS_ORIGIN`. The only gaps left in tasks 1, 2 and 6 are the cases that create a pin or need an empty database
+
+| #   | Task                                                                                                             | Proved by these checklist cases                                                                                                                                                                                                            | Status                                                                       |
+| --- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| 1   | Make `GET /pins` return only `id`, `type` and `coords` for each pin                                              | Every case under [`GET /pins`](#get-pins)                                                                                                                                                                                                  | 🟡 Fields and order pass. Empty-list and new-pin cases not run            |
+| 2   | Keep `GET /pins/:id` and `POST /pins` returning the full pin                                                     | Every case under [`GET /pins/:id`](#get-pinsid) and [`POST /pins`](#post-pins)                                                                                                                                                             | 🟡 `GET /pins/:id` passes. `POST` not run                                 |
+| 3   | Read the allowed web addresses from a `CORS_ORIGIN` list, and refuse to start without at least one           | Every case under [Configuration](#configuration)                                                                                                                                                                                           | ✅ Passes (missing, blank and list)                                          |
+| 4   | Tell browsers that an allowed address may read the API's responses, and give no permission to any other address | [Allows the web app's address](#allows-the-web-apps-address) to [Still works with no Origin header](#still-works-with-no-origin-header)                                                                                                    | ✅ Passes                                                                    |
+| 5   | Answer the browser's permission check (the preflight `OPTIONS` request) that comes before creating a pin         | [Answers the browser's preflight before creating a pin](#answers-the-browsers-preflight-before-creating-a-pin) and [Gives no permission in a preflight from any other address](#gives-no-permission-in-a-preflight-from-any-other-address) | ✅ Passes                                                                    |
+| 6   | Send the permission on every response to an allowed address, including created pins, `400`s, `404`s and `500`s  | [Allows the web app to read a created pin](#allows-the-web-app-to-read-a-created-pin) to [Allows the web app to read a 500](#allows-the-web-app-to-read-a-500)                                                                             | 🟡 `404`s and `400`s pass (re-run), `500` passed earlier. Created pin not run |
+| 7   | Check it in a real browser                                                                                       | Every case under [In a real browser](#in-a-real-browser)                                                                                                                                                                                   | ⬜ Not done               |
+| 8   | Make sure nothing else changed                                                                                   | [Every earlier case still passes](#every-earlier-case-still-passes)                                                                                                                                                                        | ⬜ Not done               |
 
 Endpoints
 
-| Method    | Path        | Does                          | What changes in this step                                             |
-| --------- | ----------- | ----------------------------- | --------------------------------------------------------------------- |
-| `GET`     | `/pins`     | Lists all pins for the map    | Each pin has only `id`, `type` and `coords`; still oldest first       |
-| `GET`     | `/pins/:id` | Returns one pin               | Nothing in the body (step 5 adds votes, replies and the poster)       |
-| `POST`    | `/pins`     | Adds a pin                    | Nothing in the body (step 13 changes what comes back)                 |
-| `OPTIONS` | any path    | The browser's preflight check | New: answers `204` with the CORS permission headers                   |
-| any       | any path    | Everything                    | A request from a listed address gets the CORS permission headers back |
+| Method    | Path        | Does                          | What changes in this step                                                |
+| --------- | ----------- | ----------------------------- | ------------------------------------------------------------------------ |
+| `GET`     | `/pins`     | Lists all pins for the map    | Each pin has only `id`, `type` and `coords`; still oldest first          |
+| `GET`     | `/pins/:id` | Returns one pin               | Nothing in the body (step 5 adds votes, replies and the poster)          |
+| `POST`    | `/pins`     | Adds a pin                    | Nothing in the body (step 13 changes what comes back)                    |
+| `OPTIONS` | any path    | The browser's preflight check | New: answers `204` with the CORS permission headers                      |
+| any       | any path    | Everything                    | A request from an allowed address gets the CORS permission headers back |
 
 Error codes
 
 - None new. Every error from steps 2 and 3 still applies, with the same status and body
-- An address that isn't listed is not an error: the API still answers normally (usually `200`), just without the permission header. The browser is what blocks the page from reading the answer
+- Any other address is not an error: the API still answers normally (usually `200`), just without the permission header. The browser is what blocks the page from reading the answer
 
 What `GET /pins` returns
 
@@ -48,23 +50,25 @@ What `GET /pins` returns
 
 What CORS permission looks like
 
-| Response header                | When                                         | Value                                                                       |
-| ------------------------------ | -------------------------------------------- | --------------------------------------------------------------------------- |
-| `Access-Control-Allow-Origin`  | The request's `Origin` is a listed address   | That exact address, like `http://localhost:5173`. Never `*`                 |
-| `Access-Control-Allow-Origin`  | No `Origin`, or an address that isn't listed | Not sent at all                                                             |
-| `Vary`                         | The request's `Origin` is a listed address   | Includes `Origin`, so a cache never hands one site's answer to another site |
-| `Access-Control-Allow-Methods` | Preflight from a listed address              | Includes `POST`                                                             |
-| `Access-Control-Allow-Headers` | Preflight from a listed address              | Includes `Content-Type`                                                     |
+| Response header                | When                                          | Value                                                                       |
+| ------------------------------ | --------------------------------------------- | --------------------------------------------------------------------------- |
+| `Access-Control-Allow-Origin`  | The request's `Origin` is an allowed address | That exact address, like `http://localhost:5173`. Never `*`                 |
+| `Access-Control-Allow-Origin`  | No `Origin`, or any other address             | Not sent at all                                                             |
+| `Vary`                         | The request's `Origin` is an allowed address | Includes `Origin`, so a cache never hands one site's answer to another site |
+| `Access-Control-Allow-Methods` | Preflight from an allowed address             | Includes `POST`                                                             |
+| `Access-Control-Allow-Headers` | Preflight from an allowed address             | Includes `Content-Type`                                                     |
 
 - An address is the scheme, host and port together. `http://localhost:5173`, `http://localhost:5174` and `https://localhost:5173` are three different addresses
 - Matching is exact: no wildcards, no "starts with"
 
 Configuration
 
-- `CORS_ORIGIN` in `api/.env` holds the allowed addresses, separated by commas, like `http://localhost:5173,http://127.0.0.1:5173`
-- Spaces around each address are ignored
-- The API won't start without `CORS_ORIGIN`, and says why in the terminal
-- Step 22 adds the live web app's address here, on Render
+- `CORS_ORIGIN` in `api/.env` holds the allowed addresses as a comma-separated list. Usually it's one, the web app's: `http://localhost:5173`
+- More than one looks like `http://localhost:5173,http://localhost:4173`. Spaces around the commas are ignored
+- Write each address exactly as the browser sends it in `Origin`: scheme, host and port, with no trailing slash
+- `http://localhost:5173` and `http://127.0.0.1:5173` are different addresses, so open the web app at the address in `CORS_ORIGIN`
+- The API won't start without at least one address in `CORS_ORIGIN`, and says why in the terminal. Missing, blank, or only spaces and commas all count as none
+- Step 22 sets `CORS_ORIGIN` on Render to the live web app's address. Each environment has its own list
 
 How the browser uses CORS
 
@@ -81,7 +85,7 @@ sequenceDiagram
   A-->>B: 204 + Allow-Origin, Allow-Methods, Allow-Headers
   B->>A: POST /pins<br/>Origin: http://localhost:5173
   A-->>B: 201 + Access-Control-Allow-Origin: http://localhost:5173
-  Note over B,A: A page at an address that isn't listed
+  Note over B,A: A page at any other address
   B->>A: GET /pins<br/>Origin: https://not-my-site.example
   A-->>B: 200, no Access-Control-Allow-Origin
   Note over B: Browser blocks the page from reading it<br/>("blocked by CORS policy")
@@ -96,7 +100,7 @@ Suggestions only. These are not acceptance criteria; any approach that passes th
 Already in place
 
 - The `cors` package and its types are already installed
-- `config.ts` already reads `CORS_ORIGIN` into `corsOrigins`, but defaults to an empty string instead of refusing to start, and nothing uses it yet
+- `config.ts` already refuses to start without `CORS_ORIGIN` (missing or blank), and already splits it into a list
 - `CORS_ORIGIN` is already set in your `api/.env`
 
 The map list
@@ -107,8 +111,8 @@ The map list
 
 CORS
 
-- Split `CORS_ORIGIN` on commas and trim each address once, in the config, so the rest of the app gets a ready list
-- Pass that list to the `cors` middleware as the allowed origins. With a list, `cors` sends back the matching address (not `*`), adds `Vary: Origin`, answers preflights with `204`, and sends nothing for addresses that aren't listed
+- Read `CORS_ORIGIN` with the same required-variable check as `DATABASE_URL`, so a missing value stops the API with the right message
+- Give the `cors` middleware the addresses as a list, even when there's only one, never a plain string. With a plain string, `cors` sends that address back on every response, even to other addresses and to requests with no `Origin`. With a list, it sends back the matching address only (not `*`), adds `Vary: Origin`, answers preflights with `204`, and sends nothing to any other address
 - Register `cors` before everything else in `app.ts`, including the JSON parser. Middleware registered after the JSON parser is skipped when the JSON is broken, so the `400` would go out without the header
 - Don't turn on credentials (cookies). Step 9 sends the sign-in token in an `Authorization` header, which needs adding to the allowed headers then, not cookies
 - Don't use `*` for the origin, even in development. It hides mistakes in the address list until you deploy
@@ -321,38 +325,7 @@ Vary: Origin
 </td></tr>
 </table>
 
-### Allows every address listed in CORS_ORIGIN
-
-- Steps:
-  1. Set `CORS_ORIGIN=http://localhost:5173, http://127.0.0.1:5173` in `api/.env` (note the space after the comma)
-  2. Restart the API
-  3. Send the request below, then send it again with `Origin: http://localhost:5173`; that one must get `http://localhost:5173` back
-  4. Put `CORS_ORIGIN` back to `http://localhost:5173` and restart afterwards
-- Proves the list is split on commas and the spaces are ignored
-- Body: the same six pins
-
-Request: `GET /pins`
-
-<table class="req-res" style="table-layout: fixed; width: 100%;">
-<colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup>
-<tr><th style="width: 50%;">Request headers</th><th style="width: 50%;">Response headers — <code>200 OK</code></th></tr>
-<tr><td style="width: 50%; vertical-align: top;">
-
-```text
-Origin: http://127.0.0.1:5173
-```
-
-</td><td style="width: 50%; vertical-align: top;">
-
-```text
-Access-Control-Allow-Origin: http://127.0.0.1:5173
-Vary: Origin
-```
-
-</td></tr>
-</table>
-
-### Gives no permission to an address that isn't listed
+### Gives no permission to any other address
 
 - The API still answers `200` with the pins; it just leaves out the permission header
 - Not a `403`: CORS is the browser's rule, and the browser is what refuses to hand the data to the page
@@ -453,7 +426,7 @@ Vary: Origin
 </td></tr>
 </table>
 
-### Gives no permission in a preflight from an address that isn't listed
+### Gives no permission in a preflight from any other address
 
 - The browser then never sends the `POST`, so no pin is created
 - No body
@@ -663,7 +636,7 @@ Access-Control-Allow-Origin: http://localhost:5173
   2. Run `npm run dev` in `api/`
   3. Put `CORS_ORIGIN` back afterwards
 - The API must not start listening on port 3000
-- Guards against going live with no allowed addresses and a web app that silently can't load any pins
+- Guards against going live with no allowed address and a web app that silently can't load any pins
 
 <table class="req-res" style="table-layout: fixed; width: 100%;">
 <colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup>
@@ -677,7 +650,73 @@ npm run dev
 </td><td style="width: 50%; vertical-align: top;">
 
 ```text
-CORS_ORIGIN is not set. Add it to api/.env (see api/.env.example)
+CORS_ORIGIN is not set.
+```
+
+</td></tr>
+</table>
+
+### Refuses to start when CORS_ORIGIN has no addresses in it
+
+- Steps:
+  1. Change the line in `api/.env` to `CORS_ORIGIN= , `
+  2. Run `npm run dev` in `api/`
+  3. Put `CORS_ORIGIN` back afterwards
+- The API must not start listening on port 3000, and must say why. Stopping with no message fails this case
+
+<table class="req-res" style="table-layout: fixed; width: 100%;">
+<colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup>
+<tr><th style="width: 50%;">Do this</th><th style="width: 50%;">Terminal shows</th></tr>
+<tr><td style="width: 50%; vertical-align: top;">
+
+```bash
+npm run dev
+```
+
+</td><td style="width: 50%; vertical-align: top;">
+
+```text
+CORS_ORIGIN is not set.
+```
+
+</td></tr>
+</table>
+
+### Allows every address in a list
+
+- Steps:
+  1. Change the line in `api/.env` to `CORS_ORIGIN=http://localhost:5173, http://localhost:4173` (the space is on purpose)
+  2. Restart the API and send the request below twice, once with each `Origin`
+  3. Put `CORS_ORIGIN` back afterwards
+- Each response names only the address that asked, never both
+- `Origin: http://localhost:5174` still gets no `Access-Control-Allow-Origin` header
+- Body: the same six pins
+
+Request: `GET /pins`
+
+<table class="req-res" style="table-layout: fixed; width: 100%;">
+<colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup>
+<tr><th style="width: 50%;">Request headers</th><th style="width: 50%;">Response headers — <code>200 OK</code></th></tr>
+<tr><td style="width: 50%; vertical-align: top;">
+
+```text
+Origin: http://localhost:5173
+```
+
+```text
+Origin: http://localhost:4173
+```
+
+</td><td style="width: 50%; vertical-align: top;">
+
+```text
+Access-Control-Allow-Origin: http://localhost:5173
+Vary: Origin
+```
+
+```text
+Access-Control-Allow-Origin: http://localhost:4173
+Vary: Origin
 ```
 
 </td></tr>
@@ -756,6 +795,6 @@ Uncaught (in promise) TypeError: Failed to fetch
 
 - Same rules as steps 2 and 3: sent as is, with no `status` / `message` / `data` wrapper, and no stack trace, SQL error or database address in a `500`
 - Items in `GET /pins` have exactly `id`, `type` and `coords`, nothing more
-- A request from a listed address gets `Access-Control-Allow-Origin` set to that exact address on every response, success or error
-- A request with no `Origin`, or from an address that isn't listed, never gets `Access-Control-Allow-Origin`
+- A request from an allowed address gets `Access-Control-Allow-Origin` set to that exact address on every response, success or error
+- A request with no `Origin`, or from any other address, never gets `Access-Control-Allow-Origin`
 - `Access-Control-Allow-Origin` is never `*`

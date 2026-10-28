@@ -242,7 +242,7 @@ npm run dev
 </td><td style="width: 50%; vertical-align: top;">
 
 ```text
-DATABASE_URL is not set. Add it to api/.env (see api/.env.example)
+DATABASE_URL is not set.
 ```
 
 </td></tr>
