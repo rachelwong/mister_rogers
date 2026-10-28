@@ -20,7 +20,6 @@ Left to do
 
 | Work                                                                           | Proved by these checklist cases                                                                               |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| Connect the API to the database through `DATABASE_URL`                         | "Refuses to start without a database address" and "Keeps the database address out of git"                     |
 | Create the `pins` table from a migration file kept in git                      | [Builds the pins table from the migration files alone](#builds-the-pins-table-from-the-migration-files-alone) |
 | Write the seed script for the sample Brisbane pins                             | Every case under [Seed script](#seed-script)                                                                  |
 | Switch `POST /pins` from the in-memory list to the database                    | Every case under [`POST /pins`](#post-pins)                                                                   |
@@ -70,7 +69,6 @@ Seed script
 Configuration
 
 - The API reads the database address from a `DATABASE_URL` environment variable in `api/.env`
-- `api/.env.example` lists `DATABASE_URL` with a placeholder in place of the real connection string, and the README's "To run" section mentions it
 - `api/.env` stays out of git, because the real connection string contains your database password
 - The API won't start without `DATABASE_URL`, and says why in the terminal
 
@@ -108,6 +106,8 @@ flowchart TD
 
 Suggestions only. These are not acceptance criteria; any approach that passes the build checklist is fine.
 
+✅ marks a suggestion that's been built (code review, 28 Oct 2026).
+
 Packages you've already installed
 
 - `drizzle-orm`, `drizzle-kit` and the `postgres` driver (postgres.js) are all this step needs
@@ -121,56 +121,57 @@ Packages you've already installed
 Hosted database
 
 - No Docker needed: Postgres runs in your Supabase project, and the API connects to it over the internet
-- Get the connection string from the project dashboard's Connect button, and pick the Session pooler one
+- ✅ Get the connection string from the project dashboard's Connect button, and pick the Session pooler one
   - The Direct connection is IPv6-only, which many home networks can't reach
   - The Transaction pooler (port 6543) doesn't support prepared statements, which postgres.js uses by default
 - Put your database password into the connection string yourself; if you've lost it, reset it in Project Settings → Database
 - The dashboard's Table Editor shows your tables and rows, and its SQL Editor runs SQL by hand
 - Free projects pause after about a week with no activity; restore yours from the dashboard if requests start failing after a break
-- Turn on row level security for the `pins` table, with no policies
+- ✅ Turn on row level security for the `pins` table, with no policies
   - Supabase also lets anyone with your project's public (anon) key read and change tables in the `public` schema through its own REST API
   - With row level security on and no policies, that route is blocked, and the API still works because it connects as the `postgres` user, which skips the policies
 - Turn on "Enforce SSL" in Project Settings → Database → SSL Configuration
   - Why: the API reaches the database over the public internet. Without enforcement, Supabase also accepts unencrypted connections, and some drivers don't ask for SSL unless told to, so pin data could travel unencrypted while everything still seems to work
   - With enforcement on, an unencrypted connection is refused, so a misconfigured driver fails loudly instead
-- Connect with SSL and verify Supabase's certificate (`sslmode=verify-full`), not just `sslmode=require`
+- ✅ Connect with SSL and verify Supabase's certificate (`sslmode=verify-full`), not just `sslmode=require`
   - Download the CA certificate from the same dashboard page, keep it in `api/`, and pass its contents to postgres.js's `ssl` option as the CA to trust
   - Why: `require` encrypts the connection but, in most drivers, doesn't check who's on the other end, so something pretending to be your database could still read everything. Checking the certificate against Supabase's CA proves the API is talking to your project
   - The CA certificate is public, not a secret, so it's fine to commit; step 22 then reuses it on Render
   - Never turn off certificate checking to make a certificate error go away; that brings back the problem it solves
-- Give the database connection a short connection timeout (a few seconds), so requests fail with a `500` quickly when the database can't be reached instead of hanging
+- ✅ Give the database connection a short connection timeout (a few seconds), so requests fail with a `500` quickly when the database can't be reached instead of hanging
   - postgres.js waits 30 seconds by default; its `connect_timeout` option is in seconds
 
 Schema and migrations
 
-- Describe the `pins` table in a Drizzle schema file and let drizzle-kit write the migration from it; apply it with drizzle-kit's migrate command
-- Let one tool own migrations: if Drizzle writes them, don't also put table changes in Supabase's own migrations folder
+- ✅ Describe the `pins` table in a Drizzle schema file and let drizzle-kit write the migration from it; apply it with drizzle-kit's migrate command
+- ✅ Let one tool own migrations: if Drizzle writes them, don't also put table changes in Supabase's own migrations folder
 - Drizzle records which migrations have run in a `__drizzle_migrations` table inside a `drizzle` schema. If you drop the `pins` table but not that schema, the migrate command thinks there's nothing to do and won't recreate the table
-- If you use a Postgres enum for the pin type, drop it along with the table, or the next migration fails because the enum already exists
-- Add npm scripts for generating migrations, running them and seeding, so each is one command
+- ✅ Add npm scripts for generating migrations, running them and seeding, so each is one command
 - Column types that keep the checklist passing:
-  - id: `uuid`, with the database making a random one by default
-  - type: `text` limited to the pin type list (a check constraint or a Postgres enum), so even a bad direct insert is refused
-  - description: `text`, not null
-  - lat and lng: `double precision`, not null. `numeric` comes back from the driver as text, and `real` adds extra decimals
-  - created date: `timestamp with time zone`, defaulting to now
-- Name columns in snake_case in the database (`created_at`) and map them to camelCase (`createdAt`) in one place
+  - ✅ id: `uuid`, with the database making a random one by default
+  - ✅ type: plain `text`, not null, defaulting to `none`. Don't limit it to the pin type list in the database (no Postgres enum or check constraint): the list is likely to change, so the API's zod check is the only thing that refuses a bad type
+    - A direct insert (SQL Editor, Drizzle Studio) can store any string, so only the API's create route is guaranteed to hold valid types
+    - Consider these approaches: Drizzle's `.$type<PinType>()` on the column keeps `type` typed as the pin type list in code without adding anything to the database
+  - ✅ description: `text`, not null
+  - ✅ lat and lng: `double precision`, not null. `numeric` comes back from the driver as text, and `real` adds extra decimals
+  - ✅ created date: `timestamp with time zone`, defaulting to now
+- ✅ Name columns in snake_case in the database (`created_at`) and map them to camelCase (`createdAt`) in one place
 
 Code layout
 
-- Keep the database connection in one module, and the pin queries (list, find by id, create) in another, so the routes never build SQL themselves
-- The routes then swap their in-memory list calls for those queries; validation and the `requireJson` check stay exactly as they are
-- Let the database make the id and created date, and have the create query return the saved row, so the `201` response is exactly what is stored. The route then no longer needs `randomUUID` or `new Date()`
-- Check that the id is a UUID before querying (zod has a UUID check). Otherwise Postgres throws "invalid input syntax for type uuid", which becomes a `500`
-- Read `DATABASE_URL` alongside `PORT` in the server config (and add it to the `Config` type), and stop with a clear message if it's missing
-- The route handlers become async. Express 5 sends a rejected promise from an async handler straight to your existing error handler, which already returns the generic `500`, so each route doesn't need its own try/catch
+- ✅ Keep the database connection in one module, and the pin queries (list, find by id, create) in another, so the routes never build SQL themselves
+- ✅ The routes then swap their in-memory list calls for those queries; validation and the `requireJson` check stay exactly as they are
+- ✅ Let the database make the id and created date, and have the create query return the saved row, so the `201` response is exactly what is stored. The route then no longer needs `randomUUID` or `new Date()`
+- ✅ Check that the id is a UUID before querying (zod has a UUID check). Otherwise Postgres throws "invalid input syntax for type uuid", which becomes a `500`
+- ✅ Read `DATABASE_URL` alongside `PORT` in the server config (and add it to the `Config` type), and stop with a clear message if it's missing
+- ✅ The route handlers become async. Express 5 sends a rejected promise from an async handler straight to your existing error handler, which already returns the generic `500`, so each route doesn't need its own try/catch
 - postgres.js reconnects by itself when the database comes back, so "Recovers once the database is back" should pass without extra code
-- Delete `api/src/data/pinStore.ts` once nothing uses it
+- ✅ Delete `api/src/data/pinStore.ts` once nothing uses it
 
 Seed script
 
-- Insert the sample pins with their fixed ids and skip any id that already exists, so running it twice changes nothing
-- Close the database connection when the seed finishes, or the command won't exit
+- ✅ Insert the sample pins with their fixed ids and skip any id that already exists, so running it twice changes nothing
+- ✅ Close the database connection when the seed finishes, or the command won't exit
 
 ## Build checklist
 
@@ -179,7 +180,7 @@ These cases are the acceptance criteria and the definition of done for this step
 - Base URL: `http://localhost:3000`
 - `id` and `createdAt` in responses will differ from the examples, except for the sample pins, whose ids and dates are fixed
 - "Fresh database" means: the `pins` table exists but has no rows. To get there, delete every row in the Supabase dashboard (Table Editor → `pins`), and don't seed
-- "Rebuilt database" means: in the dashboard's SQL Editor, drop the `pins` table, the pin type enum if you made one, and the `drizzle` schema (Drizzle's record of which migrations have run), then run the migrations
+- "Rebuilt database" means: in the dashboard's SQL Editor, drop the `pins` table and the `drizzle` schema (Drizzle's record of which migrations have run), then run the migrations
 - "Database unreachable" means: the API can't reach Supabase while the API keeps running. Turn off your computer's Wi-Fi (or unplug the network) to get there, and turn it back on afterwards
   - Pausing the project in the dashboard also works, but pausing and restoring each take a few minutes
 
@@ -196,7 +197,7 @@ These cases are the acceptance criteria and the definition of done for this step
 
 - Proves anyone can rebuild the database from what's in git
 - Steps:
-  1. Start from a rebuilt database (drop the table, any enum and the `drizzle` schema, then run the migrations)
+  1. Start from a rebuilt database (drop the table and the `drizzle` schema, then run the migrations)
   2. Check the dashboard's Table Editor: the `pins` table is back, with no rows
   3. Start the API and send the request below
 
@@ -235,30 +236,6 @@ npm run dev
 
 ```text
 DATABASE_URL is not set. Add it to api/.env (see api/.env.example)
-```
-
-</td></tr>
-</table>
-
-### Keeps the database address out of git
-
-- `git status` never lists `api/.env`
-- `api/.env.example` is committed and contains the line below: the placeholder, never your real project id or password
-- The README's "To run" section lists the same line and says to copy the Session pooler connection string from the Supabase dashboard
-
-<table class="req-res" style="table-layout: fixed; width: 100%;">
-<colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup>
-<tr><th style="width: 50%;">File</th><th style="width: 50%;">Contains</th></tr>
-<tr><td style="width: 50%; vertical-align: top;">
-
-```text
-api/.env.example
-```
-
-</td><td style="width: 50%; vertical-align: top;">
-
-```dotenv
-DATABASE_URL=postgresql://postgres.your-project-ref:your-database-password@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres
 ```
 
 </td></tr>

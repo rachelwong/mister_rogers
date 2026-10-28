@@ -1,12 +1,6 @@
 import http from 'node:http';
 import createApp from './app.ts';
-import type { Config } from './types/config.ts';
-
-const config: Config = {
-  port: Number(process.env.PORT) || 3000,
-  corsOrigins: process.env.CORS_ORIGIN ?? '',
-  nodeEnv: process.env.NODE_ENV ?? 'development',
-};
+import { config } from './config.ts';
 
 const app = createApp();
 

@@ -1,4 +1,4 @@
-# env files (can opt-in for committing if needed)
+# env files
 .env*
 !.env.example
 .env.local
@@ -17,10 +17,9 @@ skills-lock.json
 # database
 **/supabase/.temp/
 **/supabase/.branches/
-
-# Supabase Edge Functions local secrets (NEVER commit these)
 **/supabase/functions/.env
 **/supabase/functions/.env.local
+**/supabase/snippets/
 
 # dependencies
 node_modules/

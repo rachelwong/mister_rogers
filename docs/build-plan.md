@@ -918,18 +918,18 @@ Everything here is free for a hobby project.
 
 ### Backend tools
 
-| Job                | Pick                                      | Why this one                                                                                                                                                     |
-| ------------------ | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| API                | Node + Express + TypeScript               | Most tutorials and answers use it                                                                                                                                |
-| Database + sign-in | Supabase free plan (dev + live projects)  | Postgres plus ready-made sign-up, sign-in and password storage in one service                                                                                    |
-| Database code      | Drizzle                                   | Close to plain SQL, you already know it                                                                                                                          |
-| Validation         | zod                                       | Same schemas can be shared with the web app                                                                                                                      |
-| Address search     | LocationIQ (free plan)                    | Autocomplete and lookup in one service. 5,000 requests a day, 2 a second. The web app must show a "Search by LocationIQ.com" link. Backup: Photon (free, no key) |
-| Testing            | Vitest + Supertest                        | Fast tests that call your endpoints like a real client                                                                                                           |
-| Trying endpoints   | Bruno, Postman or Thunder Client          | Free REST clients                                                                                                                                                |
-| Security           | helmet + express-rate-limit               | Standard Express add-ons                                                                                                                                         |
-| API hosting        | Render (free plan)                        | Free with no card; redeploys from GitHub on merge. Sleeps after 15 minutes idle (about a minute to wake)                                                         |
-| Keep-alive         | GitHub Actions scheduled workflow         | Stops the Supabase project pausing (step 24)                                                                                                                     |
+| Job                | Pick                                     | Why this one                                                                                                                                                     |
+| ------------------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API                | Node + Express + TypeScript              | Most tutorials and answers use it                                                                                                                                |
+| Database + sign-in | Supabase free plan (dev + live projects) | Postgres plus ready-made sign-up, sign-in and password storage in one service                                                                                    |
+| Database code      | Drizzle                                  | Close to plain SQL, you already know it                                                                                                                          |
+| Validation         | zod                                      | Same schemas can be shared with the web app                                                                                                                      |
+| Address search     | LocationIQ (free plan)                   | Autocomplete and lookup in one service. 5,000 requests a day, 2 a second. The web app must show a "Search by LocationIQ.com" link. Backup: Photon (free, no key) |
+| Testing            | Vitest + Supertest                       | Fast tests that call your endpoints like a real client                                                                                                           |
+| Trying endpoints   | Bruno, Postman or Thunder Client         | Free REST clients                                                                                                                                                |
+| Security           | helmet + express-rate-limit              | Standard Express add-ons                                                                                                                                         |
+| API hosting        | Render (free plan)                       | Free with no card; redeploys from GitHub on merge. Sleeps after 15 minutes idle (about a minute to wake)                                                         |
+| Keep-alive         | GitHub Actions scheduled workflow        | Stops the Supabase project pausing (step 24)                                                                                                                     |
 
 ### Frontend tools (list only)
 

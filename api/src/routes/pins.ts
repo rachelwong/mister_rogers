@@ -1,24 +1,32 @@
 import type { Request, Response } from 'express';
 import { Router } from 'express';
-import { randomUUID } from 'node:crypto';
-import { pinStore } from '../data/pinStore.ts';
+import { createPin, getAllPins, getPin } from '../db/pinQueries.ts';
 import { requireJson, validatePinBody } from '../middleware/validation.ts';
 import {
   CreatePinSchema,
+  GetPinSchema,
   type CreatePinRequest,
 } from '../schemas/pinSchema.ts';
 
 export const pinsRouter: Router = Router();
 
-pinsRouter.get('/', (_, res: Response) => {
-  const pins = pinStore;
-
-  res.status(200).json(pins);
+pinsRouter.get('/', async (_, res: Response) => {
+  const response = await getAllPins();
+  return res.status(200).json(response);
 });
 
-pinsRouter.get('/:id', (req, res: Response) => {
-  const id = req.params.id;
-  const selectedPin = pinStore.find((x) => x.id === id);
+pinsRouter.get('/:id', async (req, res: Response) => {
+  const parsedId = GetPinSchema.safeParse(req.params);
+
+  if (!parsedId.success) {
+    return res.status(404).json({
+      error: 'Pin not found',
+    });
+  }
+
+  const id = parsedId.data.id;
+
+  const selectedPin = await getPin(id);
   if (!selectedPin) {
     // return to prevent code flow continuing onwards
     return res.status(404).json({
@@ -32,23 +40,19 @@ pinsRouter.post(
   '/',
   requireJson,
   validatePinBody(CreatePinSchema),
-  (req: Request<object, unknown, CreatePinRequest>, res: Response) => {
+  async (req: Request<object, unknown, CreatePinRequest>, res: Response) => {
     const { description, coords, type } = req.body;
 
-    const id = randomUUID();
-    const createdAt = new Date().toISOString();
-
     const newPin = {
-      id,
       description, // don't trim here, trim in schema
       coords,
       type,
-      createdAt,
     };
+    const response = await createPin(newPin);
 
-    // TODO to update with database connection
-    pinStore.push(newPin);
-
-    res.status(201).json(newPin);
+    if (!response) {
+      throw new Error(`Error creating new pin`);
+    }
+    return res.status(201).json(response);
   }
 );

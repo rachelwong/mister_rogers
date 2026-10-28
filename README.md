@@ -1,6 +1,6 @@
 # Mr Rogers
 
-A map of local know-how from people who actually live nearby. It covers things like drains that back up, footpaths that flood and branches that fall.
+A map of local know-how from people who actually live nearby. It covers things like drains that back up, footpaths that flood, faulty public bathrooms etc.
 
 This is a learning project for backend development, where Claude Code provides technical guidance and human developer delivers implementation.
 
@@ -21,7 +21,7 @@ This project is that retired person with a notebook, wearing a red jumper.
 
 - all users/visitors can browse a map with pins that include local information (i.e. drainage gotchas, swooping magpies, reliable public toilets with parent rooms etc.)
 - visitors must sign up for an account in order to add a pin, comment on a pin, vote up/down on a pin.
-- key to project is the defintion of 'neighbour', a real human person who lives within a specific area for a meaningful length of time and has genuine local knowledge to share. All of which is subjective, interpretable and it is not the goal of this project to lay down concrete definitions. Users are only required to provide a valid Brisbane physical residential address.
+- key to project is the definition of 'neighbour', a real human person who lives within a specific area for a meaningful length of time and has genuine local knowledge to share. All of which is subjective, interpretable and it is not the goal of this project to lay down concrete definitions. Users are only required to provide a valid Brisbane physical residential address.
 - moderators and admin can approve an account, delete account, delete comment.
 
 ## What is in this repo
@@ -64,10 +64,22 @@ Mobile screens, 390 × 844. Source files are in [docs/wireframes/source](docs/wi
 | :-----------------------------------------------------------: |
 | <img src="docs/wireframes/Error.png" width="240" alt="Error"> |
 
-## Backend
+## Backend notes
 
 - using typescript version 6.0 for compatibilty with eslint
 - use `npx supabase`
+- uses session pooler for supabase
+- `npm run db:generate` checks typescript schemas and generate migration files
+- `npm run db:migrate` runs migration against db online to make sure the structure is consistent
+- `npm run db:studio` drizzle studio
+- to clear all pins data in supabase SQL editor
+
+```sql
+DROP TABLE IF EXISTS public.pins;
+DROP TYPE IF EXISTS public."type";
+DROP TYPE IF EXISTS public.pin_type;
+DROP SCHEMA IF EXISTS drizzle CASCADE;
+```
 
 ### To run
 
@@ -78,6 +90,7 @@ Mobile screens, 390 × 844. Source files are in [docs/wireframes/source](docs/wi
 PORT=3000
 CORS_ORIGIN=http://localhost:5173
 NODE_ENV=development
+NODE_VERSION=24.22.1 // min lts
 ```
 
 3. Run below terminal commands inside `/api` folder
