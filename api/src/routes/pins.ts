@@ -27,7 +27,7 @@ pinsRouter.get('/:id', async (req, res: Response) => {
     });
   }
 
-  const id = parsedId.data.id;
+  const id = parsedId.data.id.toLowerCase();
 
   const selectedPin = await getPin(id);
   if (!selectedPin) {
