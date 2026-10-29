@@ -553,7 +553,7 @@ Content-Type: application/json
 
 ### Rejects a pin with no location
 
-- `coords` can be `null` in a saved pin (step 16), but a new pin must have one
+- `coords` can be `null` in a saved pin (step 19), but a new pin must have one
 
 <div class="req-res" style="display: flex; gap: 16px; width: 100%;">
 <div style="flex: 1 1 0; min-width: 0;">

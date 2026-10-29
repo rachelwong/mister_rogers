@@ -5,7 +5,7 @@ Wireframes: https://claude.ai/artifact/25cHnCbxeDnWPRAzUySKyN
 
 ## Summary
 
-Mr Rogers is a learning project for backend. The backend plan is 22 small steps, and each step teaches one backend idea. Start local, keep the tools boring, and add extras only after the core works.
+Mr Rogers is a learning project for backend. The backend plan is 28 small steps, and each step teaches one backend idea. Start local, keep the tools boring, and add extras only after the core works.
 
 **The simple approach**
 
@@ -23,18 +23,26 @@ Mr Rogers is a learning project for backend. The backend plan is 22 small steps,
 - Flood overlay
 - Pin clustering
 - "Watch a pin" notifications
+- Flagging replies (moderators delete them instead)
+- Limiting which IP addresses can connect to the live database
 - Changing your address. Moving house is part of the plan. A user can submit a new address, and it goes through the same check as the first one: years lived there plus admin approval. Until an admin approves it, the old address stays in use, so "local" pins don't change and nobody can use a move to dodge the check.
 
 ## Build plan (backend only)
 
-22 steps in 7 phases, all on the API and database. Each phase ends with something new the API can do. Each step is one PR. The web app is built alongside; its free tools are listed under Tools.
+28 steps in 7 phases, all on the API and database. Each phase ends with something new the API can do. Each step is one PR. The web app is built alongside; its free tools are listed under Tools.
 
 **How each step is written**
 
 - **What it does:** what the API can do after this step, in plain words.
-- **How:** the main jobs to get it working.
+- **How:** the main jobs to get it working, one per line.
 - **You'll learn:** the backend idea behind it.
 - **Done when:** how to check it works.
+
+**Rules for every step**
+
+- Each step adds something the API couldn't do before, and you check it with real data.
+- If a feature needs a new field or count (like `votes` or `replyCount`), the same step adds it. No field is added before the step that fills it in.
+- Earlier steps must keep working. Claude checks this in `/review-this`, so it isn't part of the step.
 
 **Tips**
 
@@ -131,7 +139,7 @@ Step 3 uses the same requests. The test: create a pin, restart the API, and it s
 
 ### Phase 2 — The API serves the map
 
-By the end, anyone can fetch pins for the map without signing in.
+By the end, anyone can fetch pins for the map without signing in, by map area, suburb or postcode.
 
 4. **Map data endpoint** 🟡 Provisionally done 28/10/2026
    - Verified in Postman: `GET /pins` returns only `id`, `type` and `coords` (including an empty list and a newly created pin); `POST /pins` and `GET /pins/:id` still return the full pin; `CORS_ORIGIN` is required; allowed addresses get `Access-Control-Allow-Origin` and `Vary: Origin` on every response, including created pins, 400s, 404s and 500s; other addresses get no permission. Still to check: the [real browser cases](plans/phase-2-step-4-map-data-endpoint.md#in-a-real-browser) (this step's "done when"). The step 2 and 3 regression run happens in `/review-this`.
@@ -141,17 +149,52 @@ By the end, anyone can fetch pins for the map without signing in.
    - Done when: a page on another address (or the web app) can fetch the pins without a CORS error.
 5. **Pins in an area, filtered by type**
    - What it does: the API only returns pins inside the area the map is showing, and can filter by type.
-   - How: accept the map's edges and an optional type as query parameters; return only pins inside those edges; add a database index on location.
+   - How:
+     - Accept the map's four edges and an optional type as query parameters on `GET /pins`.
+     - Return only the pins inside the edges, and of that type if one is given.
+     - Return `400` for a bad search, like a missing edge or an unknown type.
+     - Add a database index on location.
    - You'll learn: query parameters, filtering with WHERE, why indexes make lookups fast.
    - Done when: a small area returns only its pins, and the type filter works.
 6. **Pins by suburb or postcode**
-   - What it does: users can find pins by suburb name (like "Annerley") or postcode (like "4103") as well as by map area. The type filter still works.
-   - How: add suburb and postcode columns to the pins table; when a pin is created, look up its suburb and postcode with LocationIQ reverse geocoding and save them; keep the LocationIQ key in an environment variable; fill in the seed pins and any existing pins with a one-off script; accept `suburb` or `postcode` as query parameters on the list endpoint; match suburb names without caring about capitals; add an index on each column.
-   - Why save it on the pin: looking it up once when the pin is made means searches only read your own database. Asking LocationIQ on every search would use up the free limit and make a public endpoint depend on another service.
-   - You'll learn: calling another service from your server and keeping its key secret; saving worked-out data so reads stay simple.
-   - Done when: searching a suburb or postcode returns only pins in it; a postcode that isn't 4 digits, or mixing map edges with suburb or postcode, returns 400; a suburb with no pins returns an empty list.
+   - What it does: users can find pins by suburb (like "Annerley") or postcode (like "4103"). Each pin shows its suburb and postcode.
+   - How, looking up the suburb:
+     - Add suburb and postcode columns to the pins table.
+     - When a pin is created, your API (not the web app) sends the pin's lat and lng to LocationIQ's reverse geocoding endpoint (`GET https://us1.locationiq.com/v1/reverse?key=<your key>&lat=<lat>&lon=<lng>&format=json&normalizeaddress=1`). The web app never calls LocationIQ for this, so the key stays on the server. `normalizeaddress=1` makes LocationIQ use the same address field names every time.
+     - LocationIQ sends back the address at that spot. Save its `address.suburb` as the suburb and `address.postcode` as the postcode. If either is missing, save `null` for it.
+     - Keep the LocationIQ key in an environment variable. The API refuses to start without it, like `CORS_ORIGIN` in step 4.
+     - For the seed pins, you send the same request yourself once for each pin (in Postman or the browser), and copy the suburb and postcode into the seed data.
+   - How, when LocationIQ fails:
+     - The pin always saves, whatever LocationIQ does. A failed lookup never stops someone posting.
+     - Wait at most 3 seconds for LocationIQ to answer.
+     - Save a lookup status on each pin (not returned in any response):
+       - `done`: LocationIQ answered with an address.
+       - `no-address`: LocationIQ answered `404` "Unable to geocode", for example a pin out in Moreton Bay. Never try again.
+       - `failed`: LocationIQ didn't answer in time, answered `429` (too many requests), or answered with a `5xx` error. Try again later.
+     - Also save how many tries each pin has had.
+     - If LocationIQ answers `401` or `403` (key wrong, turned off or restricted) or `400` (the request is malformed), save the pin as `failed` and log an error. These mean your setup is broken, so you need to notice and fix it.
+   - How, retrying automatically:
+     - Retry straight away: if the first try fails, wait 1 second and try once more before saving the pin.
+     - Retry later: every 10 minutes, the API looks up to 10 `failed` pins again, one a second, so it stays under LocationIQ's limit of 2 a second.
+     - If the 10-minute run gets a `429` (too many requests), it stops and waits for the next run. It doesn't carry on through the other pins and hit the limit again.
+     - Give up on a pin after 5 tries in total. It keeps `null` for suburb and postcode, and the API logs it.
+     - A `429` doesn't count towards the 5 tries, because LocationIQ never looked at the pin.
+     - Nobody has to run anything by hand.
+   - Full details of every LocationIQ call, error and limit: [locationiq.md](locationiq.md).
+   - How, searching:
+     - Accept `suburb` or `postcode` on `GET /pins`. Match suburbs whether they're typed in capitals or not.
+     - Return `suburb` and `postcode` in the full pin.
+   - Why save it on the pin: looking it up once, when the pin is made, means searches only read your own database. They don't use up LocationIQ's free limit, and they still work if LocationIQ is down.
+   - You'll learn: calling another service from your server, keeping its key secret, and retrying when it fails.
+   - Done when:
+     - A new pin comes back with its suburb and postcode.
+     - Searching by suburb or postcode returns only the pins in it.
+     - A pin made while LocationIQ can't be reached (for example, with its address set to one that doesn't answer) still saves, with `null` for suburb and postcode. Within 10 minutes of LocationIQ working again, the pin has its suburb and postcode.
+     - A pin out in Moreton Bay saves with `null` and is never looked up again.
 
 Task list and every Postman case for step 4: [plans/phase-2-step-4-map-data-endpoint.md](plans/phase-2-step-4-map-data-endpoint.md).
+
+Task list and every Postman case for step 5: [plans/phase-2-step-5-pins-in-an-area.md](plans/phase-2-step-5-pins-in-an-area.md).
 
 **Try it in Postman (Phase 2)**
 
@@ -174,18 +217,73 @@ GET /pins?north=-27.49&south=-27.53&east=153.05&west=153.01&type=drainage
 
 → 200 OK
 [
-  { "id": "8f1c2a90-...", "type": "drainage", "coords": { "lat": -27.5098, "lng": 153.0331 } }
+  { "id": "00000000-0000-4000-8000-000000000001", "type": "drainage", "coords": { "lat": -27.5098, "lng": 153.0331 } }
 ]
 ```
 
 ```http
-# Step 6 — Pins in a suburb
+# Step 6 — The call your API makes to LocationIQ when a pin is created
+# (send it yourself in Postman to see what comes back)
+GET https://us1.locationiq.com/v1/reverse?key={{locationIqKey}}&lat=-27.5085&lon=153.023&format=json&normalizeaddress=1
+
+→ 200 OK
+{
+  "lat": "-27.5085",
+  "lon": "153.023",
+  "display_name": "Ipswich Road, Annerley, Brisbane City, Queensland, 4103, Australia",
+  "address": {
+    "road": "Ipswich Road",
+    "suburb": "Annerley",
+    "city": "Brisbane City",
+    "state": "Queensland",
+    "postcode": "4103",
+    "country": "Australia",
+    "country_code": "au"
+  }
+}
+```
+
+The API only keeps `address.suburb` and `address.postcode`. LocationIQ sends more fields than shown here; ignore them. The exact road and suburb names depend on what LocationIQ returns for that spot.
+
+```http
+# Step 6 — A new pin comes back with its suburb and postcode
+POST /pins
+Content-Type: application/json
+
+{ "type": "flooding", "description": "Water across the footpath after an hour of rain", "coords": { "lat": -27.5085, "lng": 153.023 } }
+
+→ 201 Created
+{
+  "id": "4c2e8a17-6b3d-4f9a-8e21-7d5c0b9a3f64",
+  "type": "flooding",
+  "description": "Water across the footpath after an hour of rain",
+  "coords": { "lat": -27.5085, "lng": 153.023 },
+  "createdAt": "2026-10-29T08:15:00.000Z",
+  "suburb": "Annerley",
+  "postcode": "4103"
+}
+
+# Same request while LocationIQ is down: the pin still saves
+→ 201 Created
+{
+  "id": "6e9a0d3c-2f7b-4a1e-9c58-b0d4e7f2a813",
+  "type": "flooding",
+  "description": "Water across the footpath after an hour of rain",
+  "coords": { "lat": -27.5085, "lng": 153.023 },
+  "createdAt": "2026-10-29T08:20:00.000Z",
+  "suburb": null,
+  "postcode": null
+}
+```
+
+```http
+# Step 6 — Pins in a suburb (capitals don't matter)
 GET /pins?suburb=annerley
 
 → 200 OK
 [
-  { "id": "8f1c2a90-...", "type": "drainage", "coords": { "lat": -27.5098, "lng": 153.0331 } },
-  { "id": "2b7d4e11-...", "type": "flooding", "coords": { "lat": -27.5121, "lng": 153.0298 } }
+  { "id": "00000000-0000-4000-8000-000000000001", "type": "drainage", "coords": { "lat": -27.5098, "lng": 153.0331 } },
+  { "id": "00000000-0000-4000-8000-000000000002", "type": "flooding", "coords": { "lat": -27.5085, "lng": 153.023 } }
 ]
 
 # Pins in a postcode, flooding only
@@ -193,41 +291,59 @@ GET /pins?postcode=4103&type=flooding
 
 → 200 OK
 [
-  { "id": "2b7d4e11-...", "type": "flooding", "coords": { "lat": -27.5121, "lng": 153.0298 } }
+  { "id": "00000000-0000-4000-8000-000000000002", "type": "flooding", "coords": { "lat": -27.5085, "lng": 153.023 } }
 ]
 
 # Postcode that isn't 4 digits
 GET /pins?postcode=41
 
 → 400 Bad Request
-{ "error": "Postcode must be 4 digits" }
-
-# Map edges and suburb together
-GET /pins?north=-27.49&south=-27.53&east=153.05&west=153.01&suburb=annerley
-
-→ 400 Bad Request
-{ "error": "Search by map area, suburb or postcode, not more than one" }
+{
+  "error": "Invalid search",
+  "details": [{ "field": "postcode", "message": "Postcode must be 4 digits" }]
+}
 ```
 
 ### Phase 3 — The API knows who's calling
 
-By the end, reading stays public, but only signed-in users can post.
+By the end, reading stays public, but only signed-in users with a profile can post.
 
 7. **Sign in and check the token**
-   - What it does: users can be created and signed in with email and password (the web app does the sign-in screens), and the API can tell which user sent a request.
-   - How: turn on email sign-in in your development Supabase project, and turn off "Confirm email" so test users don't need real emails (the built-in email sender only allows a few emails an hour); create a test user and sign it in through Supabase's REST endpoint to get an access token; add middleware that reads the token from the request header and asks Supabase if it's valid; add a "who am I" endpoint; leave reading pins and replies open to everyone.
-   - You'll learn: what an auth provider does for you, what an access token (JWT) is, tokens in request headers, middleware, 401 (not signed in).
-   - Done when: "who am I" returns your test user with a token and a 401 without one.
-8. **Profiles**
-   - What it does: each user has a profile with a display name (public) and a real name (private).
-   - How: create a profiles table linked to the Supabase user id; add an endpoint to create the profile straight after sign-up; reject display names that look like an address.
+   - What it does: the API can tell which user sent a request.
+   - How:
+     - In your development Supabase project, turn on email sign-in.
+     - Turn off "Confirm email", so test users don't need real email addresses.
+     - Create a test user, and sign it in through Supabase to get an access token.
+     - Add middleware that reads the token from the request and asks Supabase if it's valid.
+     - Add a "who am I" endpoint, `GET /me`.
+   - You'll learn: what an auth provider does for you, what an access token (JWT) is, middleware, 401 (not signed in).
+   - Done when: `GET /me` returns your test user with a token, and a 401 without one.
+8. **Create a profile**
+   - What it does: a signed-in user can create a profile with a display name (public) and a real name (private).
+   - How:
+     - Create a profiles table, linked to the Supabase user id.
+     - Add `POST /me/profile`.
+     - Refuse a second profile for the same user.
+     - Refuse a display name that starts with a number and a word, like "12 Smith St", so nobody posts their address as their name.
+     - Return `displayName` from `GET /me` (`null` until the profile exists).
    - You'll learn: linking your own table to users stored somewhere else; making sure each user has only one profile.
-   - Done when: creating a second profile for the same user is refused.
-9. **Only signed-in users can post**
-   - What it does: creating a pin needs a valid token, and each pin records who posted it.
-   - How: put the token check on the "create pin" endpoint; add the poster's user id to the pins table; include the poster's public details (`userDetails`) in the pin details, or `null` for pins with no poster, like the seed pins.
-   - You'll learn: foreign keys (one table pointing to another).
-   - Done when: creating a pin without a token returns 401.
+   - Done when: `GET /me` shows the new display name, and creating a second profile is refused.
+9. **Change your display name**
+   - What it does: users can change their display name.
+   - How:
+     - Add `PATCH /me/profile`.
+     - Use the same display name rules as step 8.
+   - You'll learn: updating part of a record (PATCH vs PUT).
+   - Done when: `GET /me` shows the new name.
+10. **Only signed-in users can post**
+    - What it does: creating a pin needs a valid token and a profile, and each pin shows who posted it.
+    - How:
+      - Put the token check on `POST /pins`.
+      - Refuse users who have no profile yet.
+      - Save the poster's user id on the pin.
+      - Return `userDetails` with the poster's display name in the full pin. Seed pins have no poster, so theirs is `null`.
+    - You'll learn: foreign keys (one table pointing to another).
+    - Done when: a pin created with a token shows your display name, and creating a pin without a token returns 401.
 
 **Try it in Postman (Phase 3)**
 
@@ -241,10 +357,10 @@ Content-Type: application/json
 
 → 200 OK
 {
-  "access_token": "eyJhbGciOi...",
+  "access_token": "<a long string starting with eyJ>",
   "token_type": "bearer",
   "expires_in": 3600,
-  "user": { "id": "a1b2c3d4-...", "email": "test@example.com" }
+  "user": { "id": "5b0e7c2a-91d4-4f3e-8a6b-2c7d9e1f4a30", "email": "test@example.com" }
 }
 ```
 
@@ -256,7 +372,7 @@ GET /me
 Authorization: Bearer {{token}}
 
 → 200 OK
-{ "id": "a1b2c3d4-...", "email": "test@example.com" }
+{ "id": "5b0e7c2a-91d4-4f3e-8a6b-2c7d9e1f4a30", "email": "test@example.com" }
 
 # Same request with no token
 → 401 Unauthorized
@@ -280,240 +396,23 @@ Content-Type: application/json
 
 # Display name like "12 Smith St"
 → 400 Bad Request
-{ "error": "Display name can't look like an address" }
-```
-
-```http
-# Step 9 — Create a pin with no token
-POST /pins
-Content-Type: application/json
-
-{ "type": "drainage", "description": "...", "coords": { "lat": -27.5098, "lng": 153.0331 } }
-
-→ 401 Unauthorized
-{ "error": "Not signed in" }
-```
-
-### Phase 4 — The API knows if a poster lives nearby
-
-By the end, pins from people who live within 1 km show straight away, and the rest wait for approval.
-
-10. **Home address**
-    - What it does: the API suggests addresses as the user types, saves their chosen home address and years lived there, and never shows it to anyone.
-    - How: add an address search endpoint that passes the search to LocationIQ Autocomplete (Australian addresses only, at least 3 characters); add a lookup endpoint for addresses typed in manually; save the home location and years lived there on the profile; make every endpoint return only public profile fields.
-    - You'll learn: choosing what data leaves the API.
-    - Done when: address search returns suggestions with locations, and one test proves no endpoint returns an address or real name.
-11. **Decide if a pin is local**
-    - What it does: each new pin is marked "local" if the poster lives within 1 km of it. Pins that aren't local wait for approval.
-    - How: when a pin is created, work out the distance from the poster's home to the pin; save "local" as yes or no; save non-local pins as pending; leave pending pins out of the map endpoints; return a flag the web app can use to warn the user before posting.
-    - You'll learn: why business rules belong on the server, not in the browser.
-    - Done when: a pin far from home is saved as pending and doesn't appear in the map data.
-
-**Try it in Postman (Phase 4)**
-
-```http
-# Step 10 — Address suggestions while typing
-GET /address/search?q=12 Exa
-Authorization: Bearer {{token}}
-
-→ 200 OK
-[
-  { "label": "12 Example Street, Annerley QLD 4103", "lat": -27.5101, "lng": 153.0335 },
-  { "label": "12 Example Avenue, Moorooka QLD 4105", "lat": -27.5352, "lng": 153.0241 }
-]
-
-# q shorter than 3 characters
-→ 400 Bad Request
-{ "error": "Type at least 3 characters" }
-
-# LocationIQ limit reached
-→ 503 Service Unavailable
-{ "error": "Address search is busy. Try again or enter your address manually." }
-```
-
-```http
-# Step 10 — Look up an address typed in manually
-GET /address/lookup?q=12 Example Street, Annerley QLD 4103
-Authorization: Bearer {{token}}
-
-→ 200 OK
-{ "label": "12 Example Street, Annerley QLD 4103", "lat": -27.5101, "lng": 153.0335 }
-
-# Not found
-→ 404 Not Found
-{ "error": "We couldn't find that address. Please check it." }
-```
-
-```http
-# Step 10 — Save home address
-PUT /me/home
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{ "label": "12 Example Street, Annerley QLD 4103", "lat": -27.5101, "lng": 153.0335, "yearsAtAddress": "10+" }
-
-→ 200 OK
-{ "saved": true }
-```
-
-No response anywhere in the API should ever include `label`, `lat` or `lng` of a home, or `realName`.
-
-```http
-# Step 11 — Warn before posting
-GET /pins/local-check?lat=-27.6012&lng=153.1020
-Authorization: Bearer {{token}}
-
-→ 200 OK
-{ "isLocal": false }
-```
-
-```http
-# Step 11 — Post a pin far from home
-POST /pins
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{ "type": "flooding", "description": "Underpass ankle deep on Sunday", "coords": { "lat": -27.6012, "lng": 153.1020 } }
-
-→ 201 Created
-{ "id": "c3d4e5f6-...", "status": "pending", "isLocal": false }
-
-# A pin within 1 km of home comes back as
-{ "id": "d4e5f6a7-...", "status": "live", "isLocal": true }
-```
-
-### Phase 5 — The API handles conversation
-
-By the end, the API supports replies, votes, saved pins and deleting your own pins.
-
-12. **Replies**
-    - What it does: anyone can read replies on a pin; signed-in users can add one.
-    - How: create a replies table linked to pins and users; add endpoints to list and add replies; include the reply count (`replyCount`) in the pin details.
-    - You'll learn: one-to-many relationships, joining tables.
-    - Done when: a new reply comes back when you list that pin's replies.
-13. **Votes**
-    - What it does: signed-in users can vote a pin up or down, once each.
-    - How: create a votes table with one row per user per pin; voting again changes the vote; include the total in the pin details; refuse votes on your own pin.
-    - You'll learn: unique rules in the database, update-or-insert, counting in SQL.
-    - Done when: voting twice changes your vote instead of adding a second one.
-14. **Saved pins**
-    - What it does: signed-in users can save and unsave pins.
-    - How: create a bookmarks table; add save and unsave endpoints.
-    - You'll learn: many-to-many relationships.
-    - Done when: saving the same pin twice still leaves one saved pin.
-15. **My pins and my saved pins**
-    - What it does: the API returns a user's own pins and saved pins, and lets them change their display name.
-    - How: add "my pins" (including pending ones, with their status) and "my saved pins" endpoints; return each pin's id and location so the web app can open it on the map; add an endpoint to update the display name.
-    - Done when: each list returns the right pins for the signed-in user only.
-16. **Delete your own pin**
-    - What it does: users can delete pins they posted.
-    - How: mark the pin as deleted instead of removing it; check the user deleting is the poster; saved copies come back with status "inactive".
-    - You'll learn: soft delete; 401 (not signed in) vs 403 (not allowed).
-    - Done when: deleting someone else's pin returns 403.
-
-**Try it in Postman (Phase 5)**
-
-```http
-# Step 12 — Read replies (no token needed)
-GET /pins/8f1c2a90-.../replies
-
-→ 200 OK
-[
-  {
-    "id": "r1...",
-    "text": "Same on our side of the road.",
-    "createdAt": "2026-10-22T08:00:00.000Z",
-    "userDetails": { "displayName": "Gutterguy", "livesNearby": true }
-  }
-]
-```
-
-```http
-# Step 12 — Add a reply
-POST /pins/8f1c2a90-.../replies
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{ "text": "Council cleared it in March but it's back." }
-
-→ 201 Created
-{ "id": "r2...", "text": "Council cleared it in March but it's back.", "createdAt": "2026-10-24T10:00:00.000Z" }
-```
-
-```http
-# Step 13 — Vote (1 = up, -1 = down, 0 = remove vote)
-PUT /pins/8f1c2a90-.../vote
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{ "value": 1 }
-
-→ 200 OK
-{ "votes": 15, "myVote": 1 }
-
-# Voting on your own pin
-→ 403 Forbidden
-{ "error": "You can't vote on your own pin" }
-```
-
-```http
-# Step 13 — One pin's full details, now with replies, votes and the poster
-GET /pins/8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d
-
-→ 200 OK
 {
-  "id": "8f1c2a90-4b7e-4d2a-9c11-3e5f6a7b8c9d",
-  "type": "drainage",
-  "description": "Kerb near the drain fills fast in heavy rain",
-  "coords": { "lat": -27.5098, "lng": 153.0331 },
-  "createdAt": "2026-10-21T09:30:00.000Z",
-  "votes": 14,
-  "replyCount": 2,
-  "userDetails": { "displayName": "StormWatcher", "livesNearby": true, "yearsAtAddress": "10+" }
+  "error": "Invalid profile",
+  "details": [{ "field": "displayName", "message": "Display name can't look like an address" }]
 }
 ```
 
 ```http
-# Step 14 — Save and unsave
-PUT /pins/8f1c2a90-.../save
+# Step 8 — Who am I, now with a display name
+GET /me
 Authorization: Bearer {{token}}
 
 → 200 OK
-{ "saved": true }
-
-DELETE /pins/8f1c2a90-.../save
-Authorization: Bearer {{token}}
-
-→ 200 OK
-{ "saved": false }
+{ "id": "5b0e7c2a-91d4-4f3e-8a6b-2c7d9e1f4a30", "email": "test@example.com", "displayName": "StormWatcher" }
 ```
 
 ```http
-# Step 15 — My pins (includes pending ones)
-GET /me/pins
-Authorization: Bearer {{token}}
-
-→ 200 OK
-[
-  { "id": "8f1c2a90-...", "type": "drainage", "description": "Kerb near the drain...", "coords": { "lat": -27.5098, "lng": 153.0331 }, "status": "live" },
-  { "id": "c3d4e5f6-...", "type": "flooding", "description": "Underpass ankle deep...", "coords": { "lat": -27.6012, "lng": 153.1020 }, "status": "pending" }
-]
-```
-
-```http
-# Step 15 — My saved pins
-GET /me/saved
-Authorization: Bearer {{token}}
-
-→ 200 OK
-[
-  { "id": "2b7d4e11-...", "type": "flooding", "coords": { "lat": -27.5121, "lng": 153.0298 }, "status": "active" },
-  { "id": "9e8f7a6b-...", "type": "drainage", "coords": null, "status": "inactive" }
-]
-```
-
-```http
-# Step 15 — Change display name
+# Step 9 — Change display name
 PATCH /me/profile
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -525,8 +424,341 @@ Content-Type: application/json
 ```
 
 ```http
-# Step 16 — Delete your own pin
-DELETE /pins/8f1c2a90-...
+# Step 10 — Create a pin while signed in
+POST /pins
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "type": "drainage", "description": "Drain grate blocked with leaves again", "coords": { "lat": -27.5101, "lng": 153.0335 } }
+
+→ 201 Created
+{
+  "id": "9d3f1b62-0a7e-4c58-b4d9-3e6a2f8c1b07",
+  "type": "drainage",
+  "description": "Drain grate blocked with leaves again",
+  "coords": { "lat": -27.5101, "lng": 153.0335 },
+  "createdAt": "2026-10-30T07:45:00.000Z",
+  "suburb": "Annerley",
+  "postcode": "4103",
+  "userDetails": { "displayName": "DrainWatcher" }
+}
+
+# No token
+→ 401 Unauthorized
+{ "error": "Not signed in" }
+
+# Signed in, but no profile yet
+→ 403 Forbidden
+{ "error": "Create a profile before posting" }
+```
+
+### Phase 4 — The API knows if a poster lives nearby
+
+By the end, pins from people who live within 1 km show straight away, and the rest wait for approval.
+
+11. **Address search**
+    - What it does: the API suggests Australian addresses as the user types.
+    - How:
+      - Add `GET /address/search?q=`, for signed-in users only.
+      - Your API passes the search to LocationIQ Autocomplete, limited to Australia. The web app calls your API, never LocationIQ directly, so the key stays on the server.
+      - `q` must be 3 to 200 characters. A missing, shorter or longer `q` gets a `400`.
+      - Return each suggestion's label, lat and lng.
+      - When LocationIQ fails:
+        - No matches (LocationIQ answers `404` "Unable to geocode"): return `200 []`, not an error.
+        - No answer within 3 seconds, `429` (too many requests) or a `5xx` error: return `503`, so the web app can say "try again".
+        - `401` or `403` (key wrong, turned off or restricted) or `400` (the request is malformed): return the generic `500` and log an error. It's your setup that's broken, not LocationIQ.
+      - No retries here. The user is waiting, and their next keystroke sends a new search anyway.
+      - The web app waits until the user has stopped typing for about half a second before it searches. This keeps everyone's searches together under LocationIQ's limit of 60 a minute.
+      - Full details of every LocationIQ call, error and limit: [locationiq.md](locationiq.md).
+    - You'll learn: wrapping another service in your own endpoint, and handling it failing.
+    - Done when: typing part of a real Brisbane address returns suggestions with locations.
+12. **Save your home address**
+    - What it does: users save their home address and how long they've lived there. Nobody else ever sees the address. Their pins show how long they've lived nearby.
+    - How:
+      - Add `PUT /me/home` with the chosen address (label, lat, lng) and years lived there.
+      - Save them on the profile.
+      - Return `yearsAtAddress` in each pin's `userDetails`.
+      - Write one automated test that checks no response ever includes an address or a real name.
+    - You'll learn: choosing what data leaves the API.
+    - Done when: your pins show your years at the address, and the test passes.
+13. **Decide if a pin is local**
+    - What it does: each new pin is marked "local" if the poster lives within 1 km of it. Pins that aren't local wait for an admin.
+    - How:
+      - Refuse to create a pin if the poster has no home address yet.
+      - When a pin is created, work out the distance from the poster's home to the pin.
+      - Save `status` on the pin: `live` if it's within 1 km, `pending` if not.
+      - Return `status` and `userDetails.livesNearby` in the full pin. The web app uses them to say "a moderator will review it".
+      - Leave pending pins out of `GET /pins`, and return 404 for them from `GET /pins/:id`.
+    - You'll learn: why business rules belong on the server, not in the browser.
+    - Done when: a pin far from home comes back `pending` and doesn't appear in the map data, and a pin near home comes back `live`.
+
+**Try it in Postman (Phase 4)**
+
+```http
+# Step 11 — Address suggestions while typing
+GET /address/search?q=12 Exa
+Authorization: Bearer {{token}}
+
+→ 200 OK
+[
+  { "label": "12 Example Street, Annerley QLD 4103", "lat": -27.5101, "lng": 153.0335 },
+  { "label": "12 Example Avenue, Moorooka QLD 4105", "lat": -27.5352, "lng": 153.0241 }
+]
+
+# q shorter than 3 characters
+→ 400 Bad Request
+{
+  "error": "Invalid search",
+  "details": [{ "field": "q", "message": "Type at least 3 characters" }]
+}
+
+# No address matches (LocationIQ answered 404)
+→ 200 OK
+[]
+
+# LocationIQ slow, down or at its limit
+→ 503 Service Unavailable
+{ "error": "Address search is busy. Try again in a minute." }
+```
+
+```http
+# Step 12 — Save home address
+PUT /me/home
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "label": "12 Example Street, Annerley QLD 4103", "lat": -27.5101, "lng": 153.0335, "yearsAtAddress": "more-than-10" }
+
+→ 200 OK
+{ "saved": true }
+```
+
+No response anywhere in the API should ever include the home's `label`, `lat` or `lng`, or `realName`.
+
+```http
+# Step 12 — Your pin now shows how long you've lived there
+GET /pins/9d3f1b62-0a7e-4c58-b4d9-3e6a2f8c1b07
+
+→ 200 OK
+{
+  "id": "9d3f1b62-0a7e-4c58-b4d9-3e6a2f8c1b07",
+  "type": "drainage",
+  "description": "Drain grate blocked with leaves again",
+  "coords": { "lat": -27.5101, "lng": 153.0335 },
+  "createdAt": "2026-10-30T07:45:00.000Z",
+  "suburb": "Annerley",
+  "postcode": "4103",
+  "userDetails": { "displayName": "DrainWatcher", "yearsAtAddress": "more-than-10" }
+}
+```
+
+```http
+# Step 13 — Post a pin far from home
+POST /pins
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "type": "flooding", "description": "Underpass ankle deep on Sunday", "coords": { "lat": -27.6012, "lng": 153.102 } }
+
+→ 201 Created
+{
+  "id": "c3d4e5f6-a7b8-4c9d-8e0f-1a2b3c4d5e6f",
+  "type": "flooding",
+  "description": "Underpass ankle deep on Sunday",
+  "coords": { "lat": -27.6012, "lng": 153.102 },
+  "createdAt": "2026-10-31T06:00:00.000Z",
+  "suburb": "Springwood",
+  "postcode": "4127",
+  "status": "pending",
+  "userDetails": { "displayName": "DrainWatcher", "yearsAtAddress": "more-than-10", "livesNearby": false }
+}
+
+# A pin within 1 km of home comes back with
+"status": "live"
+"userDetails": { "displayName": "DrainWatcher", "yearsAtAddress": "more-than-10", "livesNearby": true }
+
+# No home address saved yet
+→ 403 Forbidden
+{ "error": "Add your home address before posting" }
+```
+
+### Phase 5 — The API handles conversation
+
+By the end, users can reply, vote, save pins, see their own pins and delete them.
+
+14. **Add a reply**
+    - What it does: signed-in users can reply to a pin, and each pin shows how many replies it has.
+    - How:
+      - Create a replies table, linked to pins and users.
+      - Add `POST /pins/:id/replies`. Replying needs a profile and a home address, the same as posting.
+      - Text is 1 to 500 characters.
+      - Work out if the replier lives within 1 km of the pin, and save it on the reply.
+      - Return `replyCount` in the full pin.
+    - You'll learn: one-to-many relationships.
+    - Done when: adding a reply makes the pin's `replyCount` go up by one.
+15. **Read replies**
+    - What it does: anyone can read the replies on a pin.
+    - How:
+      - Add `GET /pins/:id/replies`, oldest first.
+      - Return each reply with the replier's display name and whether they live nearby.
+    - You'll learn: joining tables.
+    - Done when: a reply you added comes back in the list, with your display name.
+16. **Votes**
+    - What it does: signed-in users can vote a pin up or down, once each, and each pin shows its total.
+    - How:
+      - Create a votes table with one row per user per pin.
+      - Add `PUT /pins/:id/vote` with `1` (up), `-1` (down) or `0` (remove the vote).
+      - Voting again changes your vote.
+      - Refuse votes on your own pin.
+      - Return `votes` (the total) in the full pin.
+    - You'll learn: unique rules in the database, update-or-insert, adding up in SQL.
+    - Done when: voting twice changes your vote instead of adding a second one.
+17. **Saved pins**
+    - What it does: signed-in users can save pins, unsave them, and see the list of pins they've saved.
+    - How:
+      - Create a saved pins table with one row per user per pin.
+      - Add `PUT /pins/:id/save` and `DELETE /pins/:id/save`.
+      - Add `GET /me/saved`, returning each saved pin's id, type and location.
+    - You'll learn: many-to-many relationships.
+    - Done when: a saved pin appears in `GET /me/saved`, saving it twice still lists it once, and unsaving removes it.
+18. **My pins**
+    - What it does: users can see every pin they've posted, including ones waiting for approval.
+    - How:
+      - Add `GET /me/pins`, newest first.
+      - Return each pin's id, type, description, location and status.
+    - Done when: the list shows your pins, including pending ones, and nobody else's.
+19. **Delete your own pin**
+    - What it does: users can delete pins they posted.
+    - How:
+      - Add `DELETE /pins/:id`.
+      - Only the poster can delete it.
+      - Mark the pin as deleted instead of removing the row.
+      - Leave deleted pins out of the map, `GET /pins/:id` and `GET /me/pins`.
+      - In `GET /me/saved`, show a deleted pin with status `inactive` and no location. Other saved pins show `active`.
+    - You'll learn: soft delete; 401 (not signed in) vs 403 (not allowed).
+    - Done when: your deleted pin is gone from the map, and deleting someone else's pin returns 403.
+
+**Try it in Postman (Phase 5)**
+
+```http
+# Step 14 — Add a reply
+POST /pins/00000000-0000-4000-8000-000000000001/replies
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "text": "Council cleared it in March but it's back." }
+
+→ 201 Created
+{
+  "id": "7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+  "text": "Council cleared it in March but it's back.",
+  "createdAt": "2026-11-01T10:00:00.000Z",
+  "userDetails": { "displayName": "DrainWatcher", "livesNearby": true }
+}
+
+# The pin now counts it
+GET /pins/00000000-0000-4000-8000-000000000001
+
+→ 200 OK
+{
+  "id": "00000000-0000-4000-8000-000000000001",
+  "type": "drainage",
+  "description": "Kerb near the drain fills fast in heavy rain",
+  "coords": { "lat": -27.5098, "lng": 153.0331 },
+  "createdAt": "2026-10-21T09:30:00.000Z",
+  "suburb": "Annerley",
+  "postcode": "4103",
+  "status": "live",
+  "userDetails": null,
+  "replyCount": 1
+}
+```
+
+```http
+# Step 15 — Read replies (no token needed)
+GET /pins/00000000-0000-4000-8000-000000000001/replies
+
+→ 200 OK
+[
+  {
+    "id": "7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+    "text": "Council cleared it in March but it's back.",
+    "createdAt": "2026-11-01T10:00:00.000Z",
+    "userDetails": { "displayName": "DrainWatcher", "livesNearby": true }
+  }
+]
+```
+
+```http
+# Step 16 — Vote (1 = up, -1 = down, 0 = remove vote)
+PUT /pins/00000000-0000-4000-8000-000000000001/vote
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "value": 1 }
+
+→ 200 OK
+{ "votes": 1, "myVote": 1 }
+
+# Same user votes -1: the vote changes, it isn't added
+→ 200 OK
+{ "votes": -1, "myVote": -1 }
+
+# Voting on your own pin
+→ 403 Forbidden
+{ "error": "You can't vote on your own pin" }
+```
+
+```http
+# Step 17 — Save, list, unsave
+PUT /pins/00000000-0000-4000-8000-000000000002/save
+Authorization: Bearer {{token}}
+
+→ 200 OK
+{ "saved": true }
+
+GET /me/saved
+Authorization: Bearer {{token}}
+
+→ 200 OK
+[
+  { "id": "00000000-0000-4000-8000-000000000002", "type": "flooding", "coords": { "lat": -27.5085, "lng": 153.023 } }
+]
+
+DELETE /pins/00000000-0000-4000-8000-000000000002/save
+Authorization: Bearer {{token}}
+
+→ 200 OK
+{ "saved": false }
+```
+
+```http
+# Step 18 — My pins (includes pending ones)
+GET /me/pins
+Authorization: Bearer {{token}}
+
+→ 200 OK
+[
+  {
+    "id": "c3d4e5f6-a7b8-4c9d-8e0f-1a2b3c4d5e6f",
+    "type": "flooding",
+    "description": "Underpass ankle deep on Sunday",
+    "coords": { "lat": -27.6012, "lng": 153.102 },
+    "status": "pending"
+  },
+  {
+    "id": "9d3f1b62-0a7e-4c58-b4d9-3e6a2f8c1b07",
+    "type": "drainage",
+    "description": "Drain grate blocked with leaves again",
+    "coords": { "lat": -27.5101, "lng": 153.0335 },
+    "status": "live"
+  }
+]
+```
+
+```http
+# Step 19 — Delete your own pin
+DELETE /pins/9d3f1b62-0a7e-4c58-b4d9-3e6a2f8c1b07
 Authorization: Bearer {{token}}
 
 → 204 No Content
@@ -534,91 +766,142 @@ Authorization: Bearer {{token}}
 # Someone else's pin
 → 403 Forbidden
 { "error": "You can only delete your own pins" }
+
+# Another user who had saved it now sees
+GET /me/saved
+Authorization: Bearer {{otherUserToken}}
+
+→ 200 OK
+[
+  { "id": "9d3f1b62-0a7e-4c58-b4d9-3e6a2f8c1b07", "type": "drainage", "coords": null, "status": "inactive" }
+]
 ```
 
 ### Phase 6 — Admins and moderators
 
-By the end, new accounts and non-local pins need approval, and moderators can remove bad replies.
+By the end, new accounts and non-local pins need approval, and moderators can remove bad replies and names.
 
-17. **Roles and account approval**
-    - What it does: every account is a member, moderator or admin. New accounts start as pending: they can read everything but can't post, reply, save or vote until approved.
-    - How: add role and status to profiles; add middleware that checks role and status; return 403 for pending users on those endpoints; create one admin account in the seed.
+20. **Roles and account approval**
+    - What it does: every account is a member, moderator or admin. New accounts start as pending: they can read everything, but can't post, reply, vote or save until an admin approves them.
+    - How:
+      - Add role and status to profiles. Existing profiles become active members; new ones start pending.
+      - Add middleware that checks role and status.
+      - Return 403 for pending and flagged users on posting, replying, voting and saving.
+      - Return `role` and `status` from `GET /me`.
+      - Make your test user an admin by changing its role in the Supabase table editor.
     - You'll learn: the difference between "who are you" (authentication) and "what can you do" (authorisation).
-    - Done when: a pending user can read pins but gets 403 when posting.
-18. **Admin approval queue**
-    - What it does: admins can approve or flag new accounts, and approve or reject non-local pins.
-    - How: add admin-only endpoints to list what's waiting and to record each decision; approved non-local pins come back labelled "from someone who doesn't live nearby".
-    - Done when: an approved account can post, and an approved non-local pin appears in the map data with its label.
-19. **Moderator tools**
-    - What it does: moderators and admins can flag and delete replies, and reset an unsuitable display name.
-    - How: add those endpoints and protect them with the role check.
-    - Done when: a member gets 403 on these endpoints.
+    - Done when: a new user can read pins but gets 403 when posting.
+21. **Admins approve accounts**
+    - What it does: admins see the accounts waiting for approval, and approve or flag each one.
+    - How:
+      - Add `GET /admin/accounts`, listing pending accounts with display name and years at address.
+      - Add `POST /admin/accounts/:userId/approve` and `POST /admin/accounts/:userId/flag`.
+      - Admins only. Everyone else gets 403.
+    - Done when: an approved account can post, and a member gets 403 on these endpoints.
+22. **Admins approve non-local pins**
+    - What it does: admins see the pins waiting for approval, and approve or reject each one.
+    - How:
+      - Add `GET /admin/pins`, listing pending pins.
+      - Add `POST /admin/pins/:id/approve` (status becomes `live`) and `POST /admin/pins/:id/reject` (status becomes `rejected`).
+      - Admins only.
+    - Done when: an approved pin appears in the map data, still showing `livesNearby: false`, and a rejected pin shows as `rejected` in its poster's `GET /me/pins`.
+23. **Moderators delete replies**
+    - What it does: moderators and admins can delete any reply.
+    - How:
+      - Add `DELETE /replies/:id`, for moderators and admins only.
+      - The pin's `replyCount` goes down.
+    - Done when: a deleted reply is gone from the list, and a member gets 403.
+24. **Moderators reset display names**
+    - What it does: moderators and admins can replace an unsuitable display name.
+    - How:
+      - Add `PATCH /admin/users/:userId/display-name`, for moderators and admins only.
+      - Use the same display name rules as step 8.
+    - Done when: the user's pins and replies show the new name, and a member gets 403.
 
 **Try it in Postman (Phase 6)**
 
 ```http
-# Step 17 — A pending user tries to post
+# Step 20 — A pending user tries to post
 POST /pins
 Authorization: Bearer {{pendingUserToken}}
 Content-Type: application/json
 
-{ "type": "drainage", "description": "...", "coords": { "lat": -27.5098, "lng": 153.0331 } }
+{ "type": "drainage", "description": "Gutter overflowing outside number 40", "coords": { "lat": -27.5098, "lng": 153.0331 } }
 
 → 403 Forbidden
 { "error": "Your account is waiting for approval" }
 ```
 
 ```http
-# Step 18 — What's waiting for an admin
-GET /admin/queue
-Authorization: Bearer {{adminToken}}
+# Step 20 — Who am I, now with role and status
+GET /me
+Authorization: Bearer {{pendingUserToken}}
 
 → 200 OK
 {
-  "accounts": [
-    { "userId": "a1b2c3d4-...", "displayName": "Gutterguy", "suburb": "Annerley", "yearsAtAddress": "3-10" }
-  ],
-  "pins": [
-    { "id": "c3d4e5f6-...", "type": "flooding", "description": "Underpass ankle deep on Sunday" }
-  ]
+  "id": "e2a9c4b1-7f3d-4c8e-9b2a-6d1f0e8c5a47",
+  "email": "new@example.com",
+  "displayName": "Gutterguy",
+  "role": "member",
+  "status": "pending"
 }
 ```
 
 ```http
-# Step 18 — Approve an account
-POST /admin/accounts/a1b2c3d4-.../approve
+# Step 21 — Accounts waiting for an admin
+GET /admin/accounts
+Authorization: Bearer {{adminToken}}
+
+→ 200 OK
+[
+  { "userId": "e2a9c4b1-7f3d-4c8e-9b2a-6d1f0e8c5a47", "displayName": "Gutterguy", "yearsAtAddress": "3-10" }
+]
+
+POST /admin/accounts/e2a9c4b1-7f3d-4c8e-9b2a-6d1f0e8c5a47/approve
 Authorization: Bearer {{adminToken}}
 
 → 200 OK
 { "status": "active" }
+
+# Any admin endpoint with a member's token
+→ 403 Forbidden
+{ "error": "You don't have permission to do that" }
 ```
 
 ```http
-# Step 18 — Approve a non-local pin
-POST /admin/pins/c3d4e5f6-.../approve
+# Step 22 — Approve a non-local pin
+GET /admin/pins
 Authorization: Bearer {{adminToken}}
 
 → 200 OK
-{ "status": "live", "label": "From someone who doesn't live nearby" }
+[
+  {
+    "id": "c3d4e5f6-a7b8-4c9d-8e0f-1a2b3c4d5e6f",
+    "type": "flooding",
+    "description": "Underpass ankle deep on Sunday",
+    "coords": { "lat": -27.6012, "lng": 153.102 },
+    "status": "pending"
+  }
+]
+
+POST /admin/pins/c3d4e5f6-a7b8-4c9d-8e0f-1a2b3c4d5e6f/approve
+Authorization: Bearer {{adminToken}}
+
+→ 200 OK
+{ "status": "live" }
 ```
 
 ```http
-# Step 19 — Flag and delete a reply
-POST /replies/r1.../flag
-Authorization: Bearer {{moderatorToken}}
-
-→ 200 OK
-{ "flagged": true }
-
-DELETE /replies/r1...
+# Step 23 — Delete a reply
+DELETE /replies/7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d
 Authorization: Bearer {{moderatorToken}}
 
 → 204 No Content
 ```
 
 ```http
-# Step 19 — Reset a display name
-PATCH /admin/users/a1b2c3d4-.../display-name
+# Step 24 — Reset a display name
+PATCH /admin/users/e2a9c4b1-7f3d-4c8e-9b2a-6d1f0e8c5a47/display-name
 Authorization: Bearer {{moderatorToken}}
 Content-Type: application/json
 
@@ -626,31 +909,40 @@ Content-Type: application/json
 
 → 200 OK
 { "displayName": "Member 1043" }
-
-# Any of these with a member's token
-→ 403 Forbidden
-{ "error": "You don't have permission to do that" }
 ```
 
 ### Phase 7 — The API is live
 
-By the end, the API runs online and stays running.
+By the end, the API runs online, is protected from spam, and stays running.
 
-20. **Put the API online**
+25. **Put the API online**
     - What it does: the API works on a real web address with a real database.
-    - How: create a second hosted Supabase project (free plan) for the live site, separate from your development one, turn on "Enforce SSL" for it (so the database refuses unencrypted connections from the internet), connect with its CA certificate so the API checks it's talking to the real database, and run your migrations on it; deploy the API to Render's free plan and connect your GitHub repo so it redeploys whenever you merge; set environment variables; allow the live web app's address in CORS.
+    - How:
+      - Create a second free Supabase project for the live site, and run your migrations on it.
+      - Connect with SSL and the CA certificate, the same way as your development project (step 3).
+      - Deploy the API to Render's free plan, and connect your GitHub repo so it redeploys when you merge.
+      - Set the environment variables on Render.
+      - Allow the live web app's address in CORS.
     - You'll learn: how running locally and running live are different.
     - Done when: the live API returns pins from the hosted database, and merging a PR redeploys it.
     - Watch out: Render's free plan sleeps after 15 quiet minutes, so the next request takes about a minute.
-21. **Basic protection**
-    - What it does: the API is harder to attack or spam, and the live database only accepts connections from where the API runs.
-    - How: add helmet for security headers; add a rate limit on every endpoint that creates or changes data, and on address search; in the live Supabase project, turn on Network Restrictions (Project Settings → Database) and allow only Render's outbound IP ranges for your region (listed in the Render dashboard).
-    - Why the IP allowlist: the database can only filter by IP address, not by domain. With the allowlist, someone who gets hold of the connection string still can't connect from anywhere else. Other Render customers share those IP ranges, so it's an extra layer on top of the strong password and SSL, not a replacement for them.
-    - Done when: 30 fast posts in a row get blocked, the live API still returns pins, and connecting to the live database from your own machine is refused.
-    - Watch out: the allowlist only covers Postgres connections. Supabase Auth and its REST Data API stay open to the internet, so row level security still matters. To run migrations on the live database from your machine, add your current IP address for the run and remove it afterwards.
-22. **Keep Supabase awake**
+26. **Security headers**
+    - What it does: every response tells browsers to turn on their built-in protections.
+    - How: add helmet.
+    - You'll learn: what security headers do, and why the API shouldn't say it runs Express.
+    - Done when: responses include headers like `X-Content-Type-Options: nosniff`, and no longer include `X-Powered-By`.
+27. **Rate limits**
+    - What it does: one person can't flood the API with posts or address searches.
+    - How:
+      - Add express-rate-limit.
+      - Limit every endpoint that creates or changes data, and address search, to 30 requests a minute from one address.
+    - You'll learn: rate limiting, and status 429.
+    - Done when: the 31st post in a minute gets a 429, and reading pins still works.
+28. **Keep Supabase awake**
     - What it does: stops the free Supabase project pausing after a quiet week.
-    - How: add a health endpoint that runs a tiny database query; add a GitHub Actions scheduled job that calls it every 3 days.
+    - How:
+      - Add `GET /health/db`, which runs a tiny database query.
+      - Add a GitHub Actions scheduled job that calls it every 3 days.
     - You'll learn: scheduled jobs (cron) and health checks.
     - Done when: the job runs on schedule and gets an OK back.
     - Watch out: GitHub can turn off scheduled jobs when a repo has no commits for 60 days. Turn it back on in the Actions tab if that happens.
@@ -658,15 +950,27 @@ By the end, the API runs online and stays running.
 **Try it in Postman (Phase 7)**
 
 ```http
-# Step 20 — The live API (your Render address will differ)
+# Step 25 — The live API (your Render address will differ)
 GET https://mister-rogers-api.onrender.com/pins
 
 → 200 OK
-[ { "id": "...", "type": "drainage", "coords": { "lat": -27.5098, "lng": 153.0331 } } ]
+[
+  { "id": "00000000-0000-4000-8000-000000000001", "type": "drainage", "coords": { "lat": -27.5098, "lng": 153.0331 } }
+]
 ```
 
 ```http
-# Step 21 — Too many posts in a row
+# Step 26 — Security headers on any response
+GET /health
+
+→ 200 OK
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+(no X-Powered-By header)
+```
+
+```http
+# Step 27 — Too many posts in a row
 POST /pins   (the 31st time within a minute)
 Authorization: Bearer {{token}}
 
@@ -675,7 +979,7 @@ Authorization: Bearer {{token}}
 ```
 
 ```http
-# Step 22 — Health check that touches the database
+# Step 28 — Health check that touches the database
 GET /health/db
 
 → 200 OK
@@ -688,188 +992,112 @@ GET /health/db
 
 ### After v1
 
-Pick one at a time: photos, forgot password, flood overlay, watch-a-pin emails, changing address.
+Pick one at a time: photos, forgot password, flood overlay, watch-a-pin emails, changing address, flagging replies, limiting live database connections to Render's IP addresses.
 
-## TypeScript models
+## Data shapes
 
-The shapes the API sends and receives, matching the example requests above. Put them in one file, like `api/src/models.ts`, and add each one in the step that first needs it. Field names are suggestions; keep them in step with the Postman examples.
+What the API sends and receives, matching the example requests above. Field names are suggestions; keep them in step with the Postman examples.
 
-**Tips**
-
-- A model describes what goes over the wire, not the database table. The table can have more columns (like a home address) than any response.
-- Once zod is in (step 2), write the schema first and get the type from it with `z.infer`, so the check and the type can't drift apart.
+- A shape describes what goes over the wire, not the database table. The table can have more columns (like a home address) than any response.
+- Add each field in the step that first fills it in, never earlier.
 - Dates are ISO strings (`"2026-10-24T09:30:00.000Z"`), because JSON has no date type.
+- Once zod is in (step 2), write the schema first and get the type from it, so the check and the type can't drift apart.
 
 ### Shared values
 
-```ts
-// Add more types as you go, like "magpies" or "toilets"
-export const PIN_TYPES = [
-  "drainage",
-  "flooding",
-  "wildlife",
-  "amenity",
-  "children",
-  "parking",
-  "traffic",
-  "recreation",
-  "disability",
-  "signage",
-  "none",
-] as const;
-export type PinType = (typeof PIN_TYPES)[number];
-
-export type PinStatus = "pending" | "live" | "rejected"; // step 11, 18
-export type YearsAtAddress = "under-3" | "3-10" | "more-than-10"; // step 10
-export type Role = "member" | "moderator" | "admin"; // step 17
-export type AccountStatus = "pending" | "active" | "flagged"; // step 17
-export type SavedPinStatus = "active" | "inactive"; // inactive = poster deleted it, step 16
-```
+| Name               | Values                                                                                                            | Step |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------- | ---- |
+| Pin type           | drainage, flooding, wildlife, amenity, children, parking, traffic, recreation, disability, signage, none          | 2    |
+| Years at address   | under-3, 3-10, more-than-10                                                                                       | 12   |
+| Pin status         | live, pending (step 13), rejected (step 22)                                                                       | 13   |
+| Saved pin status   | active, inactive (the poster deleted it)                                                                          | 19   |
+| Role               | member, moderator, admin                                                                                          | 20   |
+| Account status     | pending, active, flagged                                                                                          | 20   |
 
 ### Pins
 
-```ts
-export type Coords = {
-  lat: number;
-  lng: number;
-} | null;
+**Location (`coords`):** `lat` and `lng`, both numbers. `null` only for a deleted pin in a saved list (step 19).
 
-// What a user sends to create a pin (step 2)
-export interface NewPin {
-  type: PinType;
-  description: string; // 10–500 characters
-  coords: Coords;
-}
+**New pin** (what a user sends, step 2)
 
-// One pin on the map: only what the map needs (step 4)
-export interface PinMapItem {
-  id: string;
-  type: PinType;
-  coords: Coords;
-}
+| Field         | What it is              |
+| ------------- | ----------------------- |
+| `type`        | A pin type              |
+| `description` | 10 to 500 characters    |
+| `coords`      | Where the pin is        |
 
-// One pin's full details (step 2, fields added in step 9, 12 and 13)
-export interface PinDetail extends PinMapItem {
-  description: string;
-  createdAt: string;
-  votes: number; // step 13
-  replyCount: number; // step 12
-  userDetails: PublicUserDetails; // step 9
-  label?: string; // "From someone who doesn't live nearby", step 18
-}
+**Map pin** (one item in `GET /pins`, step 4): `id`, `type`, `coords`.
 
-// Response after creating a pin (step 11)
-export interface CreatePinResponse {
-  id: string;
-  status: PinStatus;
-  isLocal: boolean;
-}
+**Full pin** (`GET /pins/:id` and the `POST /pins` response)
 
-// "My pins" includes pending ones (step 15)
-export interface MyPin extends PinMapItem {
-  description: string;
-  status: PinStatus;
-}
+| Field          | What it is                                                                   | Step |
+| -------------- | ---------------------------------------------------------------------------- | ---- |
+| `id`           | The pin's id                                                                 | 2    |
+| `type`         | A pin type                                                                   | 2    |
+| `description`  | What the poster wrote                                                        | 2    |
+| `coords`       | Where the pin is                                                             | 2    |
+| `createdAt`    | When it was posted                                                           | 2    |
+| `suburb`       | `address.suburb` from LocationIQ reverse geocoding, or `null` if missing     | 6    |
+| `postcode`     | `address.postcode` from LocationIQ reverse geocoding, or `null` if missing   | 6    |
+| `userDetails`  | The poster's public details, or `null` for seed pins                         | 10   |
+| `status`       | Pin status                                                                   | 13   |
+| `replyCount`   | How many replies it has                                                      | 14   |
+| `votes`        | Up votes minus down votes                                                    | 16   |
 
-// "My saved pins": a deleted pin comes back inactive, with no location (step 15, 16)
-export interface SavedPin {
-  id: string;
-  type: PinType;
-  coords: Coords; // null when inactive
-  status: SavedPinStatus;
-}
-```
+**My pin** (one item in `GET /me/pins`, step 18): `id`, `type`, `description`, `coords`, `status`.
+
+**Saved pin** (one item in `GET /me/saved`): `id`, `type`, `coords` (step 17), and `status` (step 19).
 
 ### Users
 
-```ts
-// The signed-in user, from the token (step 7)
-export interface Me {
-  id: string;
-  email: string;
-}
+**Me** (`GET /me`)
 
-// What a user sends to create a profile (step 8)
-export interface NewProfile {
-  displayName: string;
-  realName: string;
-}
+| Field         | What it is                              | Step |
+| ------------- | --------------------------------------- | ---- |
+| `id`          | The Supabase user id                    | 7    |
+| `email`       | The user's email                        | 7    |
+| `displayName` | `null` until the profile exists         | 8    |
+| `role`        | Role                                    | 20   |
+| `status`      | Account status                          | 20   |
 
-// The only user details anyone else ever sees (step 8, 10)
-export interface PublicProfile {
-  displayName: string;
-  livesNearby: boolean;
-  yearsAtAddress?: YearsAtAddress;
-}
+**New profile** (what a user sends, step 8): `displayName`, `realName`.
 
-// The full profile. Stays inside the API: never send it in a response (step 10, 17)
-export interface Profile {
-  userId: string; // Supabase user id
-  displayName: string;
-  realName: string;
-  address: {
-    text: string; // "12 Example Street, Annerley QLD 4103" (LocationIQ's label)
-    coords: Coords;
-  } | null;
-  yearsAtAddress: YearsAtAddress | null;
-  role: Role;
-  status: AccountStatus;
-}
-```
+**Public user details** (`userDetails`): the only user details anyone else ever sees.
 
-`Profile` is the one model with private fields. The step 10 test should check that no response contains `realName`, `address`, or the address's `lat` and `lng`.
+| Field            | What it is                                                   | Step |
+| ---------------- | ------------------------------------------------------------ | ---- |
+| `displayName`    | The public name                                              | 10   |
+| `yearsAtAddress` | Years at address, on pins only                               | 12   |
+| `livesNearby`    | Whether they live within 1 km of the pin                     | 13   |
 
-### Replies (comments)
+**Full profile:** stays inside the API, and is never sent in a response. It holds the user id, display name, real name, home address (label, lat, lng), years at address, role and status. The step 12 test checks that no response contains `realName` or any part of the home address.
+
+### Replies
 
 The API calls comments "replies", to match `/pins/:id/replies`.
 
-```ts
-// What a user sends to add a reply (step 12)
-// No pinId: it comes from the URL (POST /pins/:id/replies → req.params.id)
-export interface NewReply {
-  text: string;
-}
-
-// One reply on a pin (step 12)
-export interface Reply {
-  id: string;
-  text: string;
-  createdAt: string;
-  userDetails: PublicUserDetails;
-  flagged?: boolean; // only shown to moderators, step 19
-}
-```
+- **New reply** (what a user sends, step 14): `text`, 1 to 500 characters. No pin id: it comes from the URL.
+- **Reply** (step 14 and 15): `id`, `text`, `createdAt`, `userDetails` (display name and `livesNearby`).
 
 ### Errors
 
 Every error response has the same shape, so the web app can read any of them the same way.
 
-```ts
-// One problem with one field, from zod (step 2)
-export interface FieldError {
-  field: string;
-  message: string;
-}
+- `error`: a message a person can read, like "Pin not found".
+- `details`: only on 400s from bad input. A list of `{ field, message }`, one per broken rule.
 
-// Every 4xx and 5xx response body
-export interface ApiError {
-  error: string; // a message a person can read, like "Pin not found"
-  details?: FieldError[]; // only on 400s from bad input
-}
-```
+| Status | When                               | Example `error`                                 |
+| ------ | ---------------------------------- | ----------------------------------------------- |
+| 400    | Bad input                          | "Invalid pin" (with `details`)                  |
+| 401    | No token, or a bad one             | "Not signed in"                                 |
+| 403    | Signed in but not allowed          | "You can only delete your own pins"             |
+| 404    | Doesn't exist                      | "Pin not found"                                 |
+| 409    | Already exists                     | "Profile already exists"                        |
+| 429    | Too many requests                  | "Too many requests. Try again in a minute."     |
+| 500    | Something broke in the API         | "Something went wrong"                          |
+| 503    | LocationIQ is down or at its limit | "Address search is busy. Try again in a minute." |
 
-| Status | When                               | Example `error`                             |
-| ------ | ---------------------------------- | ------------------------------------------- |
-| 400    | Bad input                          | "Invalid pin" (with `details`)              |
-| 401    | No token, or a bad one             | "Not signed in"                             |
-| 403    | Signed in but not allowed          | "You can only delete your own pins"         |
-| 404    | Doesn't exist                      | "Pin not found"                             |
-| 409    | Already exists                     | "Profile already exists"                    |
-| 429    | Too many requests                  | "Too many requests. Try again in a minute." |
-| 500    | Something broke in the API         | "Something went wrong"                      |
-| 503    | LocationIQ is down or at its limit | "Address search is busy. Try again or ..."  |
-
-Send every error through one Express error handler, so no endpoint builds its own error body and a 500 never leaks a stack trace. The one exception is `/health/db` (step 22), which keeps its own `{ status, database }` shape for the scheduled job.
+Send every error through one Express error handler, so no endpoint builds its own error body and a 500 never leaks a stack trace. The one exception is `/health/db` (step 28), which keeps its own `{ status, database }` shape for the scheduled job.
 
 ## Questions for Rachel
 
@@ -883,25 +1111,29 @@ Answers needed before Phase 4. Everything else can wait.
 
 Handle these in v1. Each one is in the step where it comes up.
 
-| Edge case                                                      | What the API does                                            | Step   |
-| -------------------------------------------------------------- | ------------------------------------------------------------ | ------ |
-| Bad input (missing type, empty description, 10,000 characters) | Returns 400 with a clear message                             | 2      |
-| Pin id that doesn't exist                                      | Returns 404                                                  | 2      |
-| Suburb lookup fails when a pin is made (LocationIQ down)       | Saves the pin without a suburb; a script fills it in later   | 6      |
-| Postcode isn't 4 digits, or area and suburb sent together      | Returns 400                                                  | 6      |
-| Same email signs up twice                                      | Supabase Auth rejects it                                     | 7      |
-| Wrong password                                                 | Supabase Auth returns one general error                      | 7      |
-| Someone guesses passwords                                      | Supabase Auth limits sign-in tries                           | 7      |
-| Display name looks like an address                             | Rejects it; moderators can reset it later                    | 8, 19  |
-| Address can't be found                                         | Returns a clear error; the account isn't saved without one   | 10     |
-| LocationIQ limit reached (daily cap or too many at once)       | Returns a clear error so the web app can offer manual entry  | 10     |
-| Address or real name leaks in a response                       | Only public profile fields leave the API; one test checks it | 10     |
-| Poster doesn't live nearby                                     | Saves the pin as pending; labels it once approved            | 11, 18 |
-| Voting twice                                                   | One vote per user per pin                                    | 13     |
-| Deleting a pin that has replies and saves                      | Soft delete; saved copies come back with status "inactive"   | 16     |
-| Deleting someone else's pin                                    | Returns 403                                                  | 16     |
-| Member calls an admin endpoint                                 | Returns 403                                                  | 17     |
-| Supabase project pauses after a quiet week                     | Scheduled ping every 3 days                                  | 22     |
+| Edge case                                                      | What the API does                                                     | Step   |
+| -------------------------------------------------------------- | --------------------------------------------------------------------- | ------ |
+| Bad input (missing type, empty description, 10,000 characters) | Returns 400 with a clear message                                      | 2      |
+| Pin id that doesn't exist                                      | Returns 404                                                           | 2      |
+| Bad map search (missing edge, unknown type)                    | Returns 400 with every broken rule                                    | 5      |
+| Suburb lookup fails when a pin is made (slow, down, too many)  | Saves the pin with no suburb; retries once, then every 10 minutes, up to 5 tries | 6 |
+| Pin somewhere with no address (out in Moreton Bay)            | Saves the pin with no suburb and never looks it up again              | 6      |
+| LocationIQ key missing or wrong                                | Missing: the API won't start. Wrong: logs an error                    | 6, 11  |
+| Postcode isn't 4 digits                                        | Returns 400                                                           | 6      |
+| Same email signs up twice                                      | Supabase Auth rejects it                                              | 7      |
+| Wrong password                                                 | Supabase Auth returns one general error                               | 7      |
+| Someone guesses passwords                                      | Supabase Auth limits sign-in tries                                    | 7      |
+| Display name looks like an address                             | Rejects it; moderators can reset it later                             | 8, 24  |
+| Posting with no profile, or no home address                    | Returns 403 with what to do first                                     | 10, 13 |
+| Address search matches nothing                                 | Returns `200 []`                                                      | 11     |
+| LocationIQ slow, down or at its limit during address search    | Returns 503 so the web app can say "try again"                        | 11     |
+| Address or real name leaks in a response                       | Only public profile fields leave the API; one test checks it          | 12     |
+| Poster doesn't live nearby                                     | Saves the pin as pending; it shows `livesNearby: false` once approved | 13, 22 |
+| Voting twice                                                   | One vote per user per pin                                             | 16     |
+| Deleting a pin that has replies and saves                      | Soft delete; saved copies come back with status "inactive"            | 19     |
+| Deleting someone else's pin                                    | Returns 403                                                           | 19     |
+| Member calls an admin or moderator endpoint                    | Returns 403                                                           | 21     |
+| Supabase project pauses after a quiet week                     | Scheduled ping every 3 days                                           | 28     |
 
 **Leave for later:** several pins at one spot (for now, many pins can share a spot, with one comment per person per pin per location), old pins that are no longer true, people moving house, emergencies (add a "Call 000" line on the About page for now).
 
@@ -917,12 +1149,12 @@ Everything here is free for a hobby project.
 | Database + sign-in | Supabase free plan (dev + live projects) | Postgres plus ready-made sign-up, sign-in and password storage in one service                                                                                    |
 | Database code      | Drizzle                                  | Close to plain SQL, you already know it                                                                                                                          |
 | Validation         | zod                                      | Same schemas can be shared with the web app                                                                                                                      |
-| Address search     | LocationIQ (free plan)                   | Autocomplete and lookup in one service. 5,000 requests a day, 2 a second. The web app must show a "Search by LocationIQ.com" link. Backup: Photon (free, no key) |
+| Address search     | LocationIQ (free plan)                   | Autocomplete and suburb lookup in one service. 5,000 requests a day, 2 a second. The web app must show a "Search by LocationIQ.com" link. Backup: Photon (free, no key) |
 | Testing            | Vitest + Supertest                       | Fast tests that call your endpoints like a real client                                                                                                           |
 | Trying endpoints   | Bruno, Postman or Thunder Client         | Free REST clients                                                                                                                                                |
 | Security           | helmet + express-rate-limit              | Standard Express add-ons                                                                                                                                         |
 | API hosting        | Render (free plan)                       | Free with no card; redeploys from GitHub on merge. Sleeps after 15 minutes idle (about a minute to wake)                                                         |
-| Keep-alive         | GitHub Actions scheduled workflow        | Stops the Supabase project pausing (step 22)                                                                                                                     |
+| Keep-alive         | GitHub Actions scheduled workflow        | Stops the Supabase project pausing (step 28)                                                                                                                     |
 
 ### Frontend tools (list only)
 
@@ -935,7 +1167,7 @@ Everything here is free for a hobby project.
 - **Testing:** Vitest + React Testing Library
 - **Hosting:** Vercel Hobby plan (or Netlify / Cloudflare Pages free plans)
 
-**Watch out:** Supabase's free plan pauses a project after 7 days with no activity. Step 22 keeps it awake.
+**Watch out:** Supabase's free plan pauses a project after 7 days with no activity. Step 28 keeps it awake.
 
 **Only if you build the "after v1" extras:** photo storage (Supabase Storage), emails (Resend, 100 a day free), flood overlay (Brisbane City Council open data).
 
@@ -957,5 +1189,5 @@ flowchart LR
 1. The web app calls the API and sends the user's access token, so the API knows who you are.
 2. The API checks the token with Supabase, then reads and writes the database. It decides which fields go back to the browser.
 3. Map pictures come straight from OpenStreetMap. No user data goes there.
-4. At sign-up, the API asks LocationIQ for address suggestions, each with its latitude and longitude. When a pin is made, it asks LocationIQ for the pin's suburb and postcode. Searches never call LocationIQ.
+4. When a user saves their home, the API asks LocationIQ for address suggestions, each with its latitude and longitude. When a pin is made, it asks LocationIQ for the pin's suburb and postcode. Searches never call LocationIQ.
 5. The web app signs up and signs in with Supabase Auth directly and gets the access token.

@@ -38,7 +38,7 @@ Endpoints
 | --------- | ----------- | ----------------------------- | ------------------------------------------------------------------------ |
 | `GET`     | `/pins`     | Lists all pins for the map    | Each pin has only `id`, `type` and `coords`; still oldest first          |
 | `GET`     | `/pins/:id` | Returns one pin               | Nothing in the body (steps 9, 12 and 13 add the poster, replies, votes)  |
-| `POST`    | `/pins`     | Adds a pin                    | Nothing in the body (step 11 changes what comes back)                    |
+| `POST`    | `/pins`     | Adds a pin                    | Nothing in the body (step 13 changes what comes back)                    |
 | `OPTIONS` | any path    | The browser's preflight check | New: answers `204` with the CORS permission headers                      |
 | any       | any path    | Everything                    | A request from an allowed address gets the CORS permission headers back |
 
